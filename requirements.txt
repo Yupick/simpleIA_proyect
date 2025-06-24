@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+transformers
+datasets
+torch
+pandas
+PyMuPDF
+python-docx
+openpyxl
+passlib[bcrypt]
+bcrypt
+pyjwt
+jinja2
+requests
+python-multipart

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chat - LLM Client</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      #chat-container {
+        border: 1px solid #ccc;
+        padding: 10px;
+        height: 400px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+      }
+      .chat-message {
+        margin: 10px 0;
+      }
+      .user {
+        font-weight: bold;
+        color: blue;
+      }
+      .bot {
+        font-weight: bold;
+        color: green;
+      }
+      .message {
+        margin-left: 10px;
+      }
+      #feedback-status {
+        margin-top: 10px;
+        font-style: italic;
+        color: #444;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Chat - LLM Client</h1>
+    <nav>
+      <a href="/login">Login</a> | <a href="/register">Register</a> |
+      <a href="/logout">Logout</a>
+    </nav>
+
+    <!-- Contenedor del chat -->
+    <div id="chat-container">
+      {% for msg in messages %}
+      <div class="chat-message">
+        <span class="user">Tú:</span>
+        <span class="message">{{ msg.prompt }}</span>
+      </div>
+      <div class="chat-message">
+        <span class="bot">Respuesta:</span>
+        <span class="message">{{ msg.response }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Formulario para enviar mensajes -->
+    <form id="chat-form">
+      <input
+        type="text"
+        name="prompt"
+        id="prompt"
+        placeholder="Escribe tu pregunta"
+        required
+        style="width: 80%"
+      />
+      <button type="submit">Enviar</button>
+    </form>
+
+    <!-- Botón para enviar el feedback de la conversación completa -->
+    <button id="send-full-feedback" style="margin-top: 20px">Feedback</button>
+    <div id="feedback-status"></div>
+
+    <script>
+      // Envío del mensaje del usuario y la respuesta del modelo
+      document
+        .getElementById("chat-form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          const promptInput = document.getElementById("prompt");
+          const prompt = promptInput.value.trim();
+          if (prompt === "") return;
+
+          const chatContainer = document.getElementById("chat-container");
+
+          // Agregar mensaje del usuario
+          const userMessage = document.createElement("div");
+          userMessage.className = "chat-message";
+          userMessage.innerHTML =
+            '<span class="user">Tú:</span> <span class="message">' +
+            prompt +
+            "</span>";
+          chatContainer.appendChild(userMessage);
+          promptInput.value = "";
+
+          try {
+            const formData = new FormData();
+            formData.append("prompt", prompt);
+            const response = await fetch("/predict", {
+              method: "POST",
+              body: formData,
+            });
+            const data = await response.json();
+            if (data.error) {
+              alert("Error: " + data.error);
+              return;
+            }
+            // Agregar respuesta del bot
+            const botMessage = document.createElement("div");
+            botMessage.className = "chat-message";
+            botMessage.innerHTML =
+              '<span class="bot">Respuesta:</span> <span class="message">' +
+              data.response +
+              "</span>";
+            chatContainer.appendChild(botMessage);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          } catch (err) {
+            alert("Error: " + err);
+          }
+        });
+
+      // Función para enviar la conversación completa como feedback
+      document
+        .getElementById("send-full-feedback")
+        .addEventListener("click", async function () {
+          const chatContainer = document.getElementById("chat-container");
+          // Recopilar el texto de cada mensaje en el contenedor
+          const messagesHTML = Array.from(
+            chatContainer.getElementsByClassName("chat-message")
+          )
+            .map((msg) => msg.innerText)
+            .join("\n");
+
+          const feedbackStatus = document.getElementById("feedback-status");
+          feedbackStatus.innerText = "Enviando conversación completa...";
+
+          try {
+            // Enviar la conversación al endpoint `/feedback`
+            const response = await fetch("http://localhost:8000/feedback", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ text: messagesHTML }),
+            });
+            const data = await response.json();
+            if (response.ok) {
+              feedbackStatus.innerText = "Conversación enviada para feedback.";
+            } else {
+              feedbackStatus.innerText =
+                "Error al enviar feedback: " + (data.detail || data.error);
+            }
+          } catch (err) {
+            feedbackStatus.innerText = "Error: " + err;
+          }
+        });
+    </script>
+  </body>
+</html>

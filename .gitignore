@@ -1,0 +1,16 @@
+# Ignorar modelos entrenados
+model_llm/
+
+# Ignorar archivos de entrenamiento (datasets)
+trainer_llm/
+
+# Ignorar entorno virtual de Python
+venv/
+
+# Ignorar archivos temporales de sistema o editores comunes
+__pycache__/
+*.py[cod]
+*.sqlite
+.DS_Store
+*.log
+.env
