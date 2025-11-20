@@ -66,8 +66,12 @@
         id="prompt"
         placeholder="Escribe tu pregunta"
         required
-        style="width: 80%"
+        style="width: 70%"
       />
+      <label>
+        <input type="checkbox" id="stream-mode" />
+        Streaming
+      </label>
       <button type="submit">Enviar</button>
     </form>
 
@@ -82,6 +86,7 @@
         .addEventListener("submit", async function (e) {
           e.preventDefault();
           const promptInput = document.getElementById("prompt");
+          const streamMode = document.getElementById("stream-mode").checked;
           const prompt = promptInput.value.trim();
           if (prompt === "") return;
 
@@ -97,29 +102,84 @@
           chatContainer.appendChild(userMessage);
           promptInput.value = "";
 
+          // Crear div para respuesta del bot
+          const botMessage = document.createElement("div");
+          botMessage.className = "chat-message";
+          const botSpan = document.createElement("span");
+          botSpan.className = "bot";
+          botSpan.innerText = "Respuesta:";
+          const messageSpan = document.createElement("span");
+          messageSpan.className = "message";
+          botMessage.appendChild(botSpan);
+          botMessage.appendChild(document.createTextNode(" "));
+          botMessage.appendChild(messageSpan);
+          chatContainer.appendChild(botMessage);
+
           try {
-            const formData = new FormData();
-            formData.append("prompt", prompt);
-            const response = await fetch("/predict", {
-              method: "POST",
-              body: formData,
-            });
-            const data = await response.json();
-            if (data.error) {
-              alert("Error: " + data.error);
-              return;
+            if (streamMode) {
+              // Modo streaming SSE
+              const response = await fetch("/predict", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  prompt: prompt,
+                  stream: true,
+                  max_length: 50,
+                  num_return_sequences: 1,
+                  temperature: 0.7,
+                }),
+              });
+
+              const reader = response.body.getReader();
+              const decoder = new TextDecoder();
+              let buffer = "";
+
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop(); // Guardar línea incompleta
+
+                for (const line of lines) {
+                  if (line.startsWith("data: ")) {
+                    const data = line.slice(6);
+                    if (data === "[DONE]") {
+                      break;
+                    }
+                    messageSpan.innerText += data + " ";
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                  }
+                }
+              }
+            } else {
+              // Modo normal (sin streaming)
+              const response = await fetch("/predict", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  prompt: prompt,
+                  stream: false,
+                  max_length: 50,
+                  num_return_sequences: 1,
+                  temperature: 0.7,
+                }),
+              });
+              const data = await response.json();
+              if (data.generated_text) {
+                messageSpan.innerText = data.generated_text;
+              } else {
+                messageSpan.innerText = "Error: " + (data.detail || "Unknown");
+              }
             }
-            // Agregar respuesta del bot
-            const botMessage = document.createElement("div");
-            botMessage.className = "chat-message";
-            botMessage.innerHTML =
-              '<span class="bot">Respuesta:</span> <span class="message">' +
-              data.response +
-              "</span>";
-            chatContainer.appendChild(botMessage);
             chatContainer.scrollTop = chatContainer.scrollHeight;
           } catch (err) {
-            alert("Error: " + err);
+            messageSpan.innerText = "Error: " + err;
           }
         });
 

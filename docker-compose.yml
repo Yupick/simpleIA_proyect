@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  llm-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llm_modular_api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEVICE=cpu
+      - SECRET_KEY=${SECRET_KEY:-CHANGE_ME_IN_PRODUCTION}
+      - LOG_LEVEL=INFO
+      - RATE_LIMIT_REQUESTS=10
+      - RATE_LIMIT_WINDOW_SECONDS=60
+    volumes:
+      # Persistir bases de datos
+      - ./feedback:/app/feedback
+      # Persistir modelos descargados (cache HuggingFace)
+      - huggingface_cache:/root/.cache/huggingface
+      # Persistir modelos entrenados
+      - ./model_llm:/app/model_llm
+    restart: unless-stopped
+    networks:
+      - llm_network
+
+  # Opcional: Cliente web en puerto separado
+  llm-client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llm_web_client
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=production
+    command:
+      ["uvicorn", "app.llm_client:app", "--host", "0.0.0.0", "--port", "8001"]
+    depends_on:
+      - llm-api
+    restart: unless-stopped
+    networks:
+      - llm_network
+
+volumes:
+  huggingface_cache:
+    driver: local
+
+networks:
+  llm_network:
+    driver: bridge

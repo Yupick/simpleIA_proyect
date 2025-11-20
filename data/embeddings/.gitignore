@@ -1,0 +1,6 @@
+# Mantener directorio para índices FAISS pero ignorar archivos generados
+*.faiss
+*.pkl
+index.faiss
+documents.pkl
+!.gitignore

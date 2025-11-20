@@ -1,0 +1,4 @@
+# Ignorar todos los archivos de datos excepto los ejemplos
+*
+!.gitignore
+!sample_*.txt

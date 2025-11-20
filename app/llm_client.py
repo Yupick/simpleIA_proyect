@@ -14,6 +14,9 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Definir la ruta base (este archivo está en app/)
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -61,14 +64,15 @@ async def login_get(request: Request):
 async def login_post(username: str = Form(...), password: str = Form(...)):
     payload = {"username": username, "password": password}
     try:
-        response = requests.post(f"{API_URL}/login", data=payload)
+        response = requests.post(f"{API_URL}/auth/login", data=payload)
         response.raise_for_status()
         data = response.json()
         access_token = data.get("access_token")
         if not access_token:
             return HTMLResponse("Error: No token obtained", status_code=400)
         redirect = RedirectResponse(url="/", status_code=302)
-        redirect.set_cookie(key="access_token", value=access_token, httponly=True)
+        secure = os.getenv("ENVIRONMENT", "development") == "production"
+        redirect.set_cookie(key="access_token", value=access_token, httponly=True, secure=secure, samesite="lax")
         return redirect
     except Exception as e:
         return HTMLResponse(f"Error during login: {e}", status_code=400)
@@ -76,7 +80,8 @@ async def login_post(username: str = Form(...), password: str = Form(...)):
 @app.get("/logout")
 async def logout():
     redirect = RedirectResponse(url="/", status_code=302)
-    redirect.delete_cookie("access_token")
+    secure = os.getenv("ENVIRONMENT", "development") == "production"
+    redirect.delete_cookie("access_token", secure=secure, samesite="lax")
     return redirect
 
 @app.get("/register", response_class=HTMLResponse)
@@ -87,7 +92,7 @@ async def register_get(request: Request):
 async def register_post(username: str = Form(...), password: str = Form(...)):
     payload = {"username": username, "password": password}
     try:
-        response = requests.post(f"{API_URL}/register", json=payload)
+        response = requests.post(f"{API_URL}/auth/register", json=payload)
         response.raise_for_status()
         return HTMLResponse("Registration successful. Now you can <a href='/login'>login</a>.")
     except Exception as e:

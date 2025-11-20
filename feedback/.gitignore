@@ -1,0 +1,5 @@
+# Mantener directorio pero ignorar bases de datos
+*.sqlite
+*.sqlite3
+*.db
+!.gitignore

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - LLM API</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: #f5f5f5;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      header {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .stat-card h3 {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+      }
+
+      .stat-card .value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .chart-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .chart-card h2 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 18px;
+      }
+
+      .refresh-btn {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .refresh-btn:hover {
+        background: #0056b3;
+      }
+
+      .table-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+
+      th {
+        background: #f8f9fa;
+        color: #333;
+        font-weight: 600;
+      }
+
+      tr:hover {
+        background: #f8f9fa;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🎛️ Admin Dashboard</h1>
+        <p>Monitoreo de métricas y estado del sistema LLM API</p>
+        <button class="refresh-btn" onclick="refreshData()">
+          🔄 Actualizar Datos
+        </button>
+      </header>
+
+      <!-- Estadísticas principales -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>Total Requests</h3>
+          <div class="value" id="total-requests">-</div>
+        </div>
+        <div class="stat-card">
+          <h3>Avg Latency (ms)</h3>
+          <div class="value" id="avg-latency">-</div>
+        </div>
+        <div class="stat-card">
+          <h3>Cache Size</h3>
+          <div class="value" id="cache-size">-</div>
+        </div>
+        <div class="stat-card">
+          <h3>Embeddings Docs</h3>
+          <div class="value" id="embeddings-docs">-</div>
+        </div>
+      </div>
+
+      <!-- Gráficos -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h2>📊 Requests por Endpoint</h2>
+          <canvas id="requestsChart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h2>⏱️ Latencia por Endpoint (ms)</h2>
+          <canvas id="latencyChart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h2>📈 Status Codes</h2>
+          <canvas id="statusChart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h2>💬 Feedback Reciente</h2>
+          <canvas id="feedbackChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Tabla de endpoints -->
+      <div class="table-container">
+        <h2>📋 Detalle de Endpoints</h2>
+        <table id="endpoints-table">
+          <thead>
+            <tr>
+              <th>Endpoint</th>
+              <th>Requests</th>
+              <th>Avg Latency (ms)</th>
+              <th>Success Rate</th>
+            </tr>
+          </thead>
+          <tbody id="endpoints-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      let requestsChart, latencyChart, statusChart, feedbackChart;
+
+      async function fetchMetrics() {
+        const response = await fetch("/metrics");
+        return await response.json();
+      }
+
+      async function fetchCacheStats() {
+        try {
+          const response = await fetch("/predict/cache/stats");
+          return await response.json();
+        } catch {
+          return { size: 0, max_size: 100 };
+        }
+      }
+
+      async function fetchEmbeddingsStats() {
+        try {
+          const response = await fetch("/embed/stats");
+          return await response.json();
+        } catch {
+          return { total_documents: 0 };
+        }
+      }
+
+      async function refreshData() {
+        const [metrics, cacheStats, embeddingsStats] = await Promise.all([
+          fetchMetrics(),
+          fetchCacheStats(),
+          fetchEmbeddingsStats(),
+        ]);
+
+        // Actualizar estadísticas principales
+        const totalRequests = Object.values(metrics.requests).reduce(
+          (a, b) => a + b,
+          0
+        );
+        document.getElementById("total-requests").textContent =
+          totalRequests.toLocaleString();
+
+        const avgLatencies = Object.values(metrics.latencies).filter(
+          (l) => l > 0
+        );
+        const avgLatency =
+          avgLatencies.length > 0
+            ? (
+                avgLatencies.reduce((a, b) => a + b, 0) / avgLatencies.length
+              ).toFixed(2)
+            : "0";
+        document.getElementById("avg-latency").textContent = avgLatency;
+
+        document.getElementById(
+          "cache-size"
+        ).textContent = `${cacheStats.size}/${cacheStats.max_size}`;
+        document.getElementById("embeddings-docs").textContent =
+          embeddingsStats.total_documents.toLocaleString();
+
+        // Actualizar gráficos
+        updateCharts(metrics);
+        updateTable(metrics);
+      }
+
+      function updateCharts(metrics) {
+        const endpoints = Object.keys(metrics.requests);
+        const requestCounts = Object.values(metrics.requests);
+        const latencies = endpoints.map((e) => metrics.latencies[e] || 0);
+
+        // Requests Chart
+        if (requestsChart) requestsChart.destroy();
+        requestsChart = new Chart(document.getElementById("requestsChart"), {
+          type: "bar",
+          data: {
+            labels: endpoints,
+            datasets: [
+              {
+                label: "Requests",
+                data: requestCounts,
+                backgroundColor: "rgba(54, 162, 235, 0.5)",
+                borderColor: "rgba(54, 162, 235, 1)",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+          },
+        });
+
+        // Latency Chart
+        if (latencyChart) latencyChart.destroy();
+        latencyChart = new Chart(document.getElementById("latencyChart"), {
+          type: "bar",
+          data: {
+            labels: endpoints,
+            datasets: [
+              {
+                label: "Latency (ms)",
+                data: latencies,
+                backgroundColor: "rgba(255, 159, 64, 0.5)",
+                borderColor: "rgba(255, 159, 64, 1)",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+          },
+        });
+
+        // Status Chart
+        const statusData = [];
+        const statusLabels = [];
+        for (const [endpoint, codes] of Object.entries(metrics.status_codes)) {
+          for (const [code, count] of Object.entries(codes)) {
+            const idx = statusLabels.indexOf(code);
+            if (idx === -1) {
+              statusLabels.push(code);
+              statusData.push(count);
+            } else {
+              statusData[idx] += count;
+            }
+          }
+        }
+
+        if (statusChart) statusChart.destroy();
+        statusChart = new Chart(document.getElementById("statusChart"), {
+          type: "doughnut",
+          data: {
+            labels: statusLabels,
+            datasets: [
+              {
+                data: statusData,
+                backgroundColor: [
+                  "rgba(75, 192, 192, 0.5)",
+                  "rgba(255, 99, 132, 0.5)",
+                  "rgba(255, 206, 86, 0.5)",
+                  "rgba(153, 102, 255, 0.5)",
+                ],
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+          },
+        });
+
+        // Feedback Chart (placeholder con datos simulados)
+        if (feedbackChart) feedbackChart.destroy();
+        feedbackChart = new Chart(document.getElementById("feedbackChart"), {
+          type: "line",
+          data: {
+            labels: ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"],
+            datasets: [
+              {
+                label: "Feedback Count",
+                data: [12, 19, 8, 15, 22, 10, 14],
+                borderColor: "rgba(75, 192, 192, 1)",
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                tension: 0.4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+          },
+        });
+      }
+
+      function updateTable(metrics) {
+        const tbody = document.getElementById("endpoints-tbody");
+        tbody.innerHTML = "";
+
+        for (const endpoint of Object.keys(metrics.requests)) {
+          const requests = metrics.requests[endpoint];
+          const latency = (metrics.latencies[endpoint] || 0).toFixed(2);
+
+          // Calcular success rate
+          const statusCodes = metrics.status_codes[endpoint] || {};
+          const successCount =
+            (statusCodes["200"] || 0) + (statusCodes["201"] || 0);
+          const totalCount = Object.values(statusCodes).reduce(
+            (a, b) => a + b,
+            0
+          );
+          const successRate =
+            totalCount > 0
+              ? ((successCount / totalCount) * 100).toFixed(1)
+              : "0.0";
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td>${endpoint}</td>
+                    <td>${requests}</td>
+                    <td>${latency}</td>
+                    <td>${successRate}%</td>
+                `;
+          tbody.appendChild(row);
+        }
+      }
+
+      // Cargar datos al iniciar
+      refreshData();
+
+      // Auto-refresh cada 30 segundos
+      setInterval(refreshData, 30000);
+    </script>
+  </body>
+</html>

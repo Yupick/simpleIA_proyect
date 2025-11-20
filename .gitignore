@@ -1,16 +1,101 @@
-# Ignorar modelos entrenados
+############################
+# Proyecto LLM - .gitignore
+############################
+
+# Modelos y datasets grandes
 model_llm/
+trainer_llm/*.txt
+trainer_llm/*.pdf
+trainer_llm/*.csv
+trainer_llm/*.json
+trainer_llm/*.xlsx
+trainer_llm/*.xls
+trainer_llm/*.docx
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
 
-# Ignorar archivos de entrenamiento (datasets)
-trainer_llm/
+# Embeddings y vectores
+data/embeddings/*.faiss
+data/embeddings/*.pkl
+data/embeddings/index.faiss
+data/embeddings/documents.pkl
 
-# Ignorar entorno virtual de Python
+# Entorno virtual (múltiples variantes)
 venv/
+.venv/
+env/
+.env/
+ENV/
+virtualenv/
 
-# Ignorar archivos temporales de sistema o editores comunes
+# Archivos de configuración sensibles
+.env
+.env.*
+!.env.example
+
+# Bases de datos (desarrollo)
+*.sqlite
+*.sqlite3
+*.db
+feedback/*.sqlite
+feedback/*.db
+
+# Cachés y temporales Python
 __pycache__/
 *.py[cod]
-*.sqlite
-.DS_Store
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
 *.log
-.env
+*.log.*
+
+# Herramientas / análisis
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker (solo ignorar volúmenes locales, no configs)
+.docker/
+docker-data/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+*.ipynb
+
+# Cachés de transformers/huggingface
+.cache/
+huggingface_cache/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.bak
+*.orig
+
+############################

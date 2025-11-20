@@ -1,0 +1,92 @@
+# Git
+
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+
+.github/
+.gitlab-ci.yml
+
+# Configuración local
+
+.env
+.env.\*
+!.env.example
+
+# Modelos y datos grandes (se montan como volúmenes)
+
+model_llm/
+trainer_llm/_.txt
+trainer_llm/_.pdf
+trainer_llm/_.csv
+data/embeddings/_.faiss
+data/embeddings/_.pkl
+feedback/_.sqlite
+feedback/\*.db
+
+# Entorno virtual
+
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache y temporales
+
+**pycache**/
+_.py[cod]
+_$py.class
+_.pyc
+_.pyo
+_.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+_.egg-info/
+dist/
+build/
+_.log
+_.log.\*
+
+# IDE
+
+.vscode/
+.idea/
+_.swp
+_.swo
+\*~
+
+# Sistema
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Documentación de desarrollo
+
+doc/
+README.md
+\*.md
+!requirements.txt
+
+# Tests (no necesarios en producción)
+
+tests/
+.coverage
+htmlcov/
+coverage.xml
+
+# Docker
+
+Dockerfile
+docker-compose.yml
+.dockerignore
+.docker/
+
+# Scripts de desarrollo
+
+setup_env.sh
+run_llm.sh
+\*.sh
