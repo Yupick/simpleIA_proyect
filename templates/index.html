@@ -1,223 +1,199 @@
-<!DOCTYPE html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Chat - LLM Client</title>
-    <link rel="stylesheet" href="/static/style.css" />
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-      }
-      #chat-container {
-        border: 1px solid #ccc;
-        padding: 10px;
-        height: 400px;
-        overflow-y: auto;
-        margin-bottom: 20px;
-      }
-      .chat-message {
-        margin: 10px 0;
-      }
-      .user {
-        font-weight: bold;
-        color: blue;
-      }
-      .bot {
-        font-weight: bold;
-        color: green;
-      }
-      .message {
-        margin-left: 10px;
-      }
-      #feedback-status {
-        margin-top: 10px;
-        font-style: italic;
-        color: #444;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Chat - LLM Client</h1>
-    <nav>
-      <a href="/login">Login</a> | <a href="/register">Register</a> |
-      <a href="/logout">Logout</a>
-    </nav>
-
-    <!-- Contenedor del chat -->
-    <div id="chat-container">
-      {% for msg in messages %}
-      <div class="chat-message">
-        <span class="user">Tú:</span>
-        <span class="message">{{ msg.prompt }}</span>
-      </div>
-      <div class="chat-message">
-        <span class="bot">Respuesta:</span>
-        <span class="message">{{ msg.response }}</span>
-      </div>
-      {% endfor %}
+{% extends "base.html" %} {% block content %}
+<!-- Main Content -->
+<main class="container chat-container">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Chat con el Asistente</h2>
     </div>
+    <div class="card-body">
+      <!-- Contenedor del chat -->
+      <div class="chat-box">
+        <div class="chat-messages" id="chat-container">
+          {% for msg in messages %}
+          <div class="message">
+            <div class="message-avatar">U</div>
+            <div class="message-content">{{ msg.prompt }}</div>
+          </div>
+          <div class="message bot">
+            <div class="message-avatar">A</div>
+            <div class="message-content">{{ msg.response }}</div>
+          </div>
+          {% endfor %}
+        </div>
 
-    <!-- Formulario para enviar mensajes -->
-    <form id="chat-form">
-      <input
-        type="text"
-        name="prompt"
-        id="prompt"
-        placeholder="Escribe tu pregunta"
-        required
-        style="width: 70%"
-      />
-      <label>
-        <input type="checkbox" id="stream-mode" />
-        Streaming
-      </label>
-      <button type="submit">Enviar</button>
-    </form>
+        <div class="chat-input-container">
+          <form id="chat-form" class="chat-input-form">
+            <input
+              type="text"
+              name="prompt"
+              id="prompt"
+              class="chat-input"
+              placeholder="Escribe tu pregunta..."
+              required
+            />
+            <label style="display: flex; align-items: center; gap: 0.5rem">
+              <input type="checkbox" id="stream-mode" />
+              Streaming
+            </label>
+            <button type="submit" class="chat-send-btn">Enviar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button id="send-full-feedback" class="btn btn-secondary w-full">
+        💬 Enviar Feedback
+      </button>
+      <div id="feedback-status" class="mt-sm"></div>
+    </div>
+  </div>
+</main>
+{% endblock %} {% block extra_js %}
+<script>
+  // Envío del mensaje del usuario y la respuesta del modelo
+  document
+    .getElementById("chat-form")
+    .addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const promptInput = document.getElementById("prompt");
+      const streamMode = document.getElementById("stream-mode").checked;
+      const prompt = promptInput.value.trim();
+      if (prompt === "") return;
 
-    <!-- Botón para enviar el feedback de la conversación completa -->
-    <button id="send-full-feedback" style="margin-top: 20px">Feedback</button>
-    <div id="feedback-status"></div>
+      const chatContainer = document.getElementById("chat-container");
 
-    <script>
-      // Envío del mensaje del usuario y la respuesta del modelo
-      document
-        .getElementById("chat-form")
-        .addEventListener("submit", async function (e) {
-          e.preventDefault();
-          const promptInput = document.getElementById("prompt");
-          const streamMode = document.getElementById("stream-mode").checked;
-          const prompt = promptInput.value.trim();
-          if (prompt === "") return;
+      // Agregar mensaje del usuario
+      const userMessage = document.createElement("div");
+      userMessage.className = "message user";
+      userMessage.innerHTML =
+        '<div class="message-avatar">U</div><div class="message-content">' +
+        prompt +
+        "</div>";
+      chatContainer.appendChild(userMessage);
+      promptInput.value = "";
 
-          const chatContainer = document.getElementById("chat-container");
+      // Crear div para respuesta del bot
+      const botMessage = document.createElement("div");
+      botMessage.className = "message";
+      const botAvatar = document.createElement("div");
+      botAvatar.className = "message-avatar";
+      botAvatar.innerText = "A";
+      const messageContent = document.createElement("div");
+      messageContent.className = "message-content";
+      botMessage.appendChild(botAvatar);
+      botMessage.appendChild(messageContent);
+      chatContainer.appendChild(botMessage);
 
-          // Agregar mensaje del usuario
-          const userMessage = document.createElement("div");
-          userMessage.className = "chat-message";
-          userMessage.innerHTML =
-            '<span class="user">Tú:</span> <span class="message">' +
-            prompt +
-            "</span>";
-          chatContainer.appendChild(userMessage);
-          promptInput.value = "";
+      // Scroll automático
+      chatContainer.scrollTop = chatContainer.scrollHeight;
 
-          // Crear div para respuesta del bot
-          const botMessage = document.createElement("div");
-          botMessage.className = "chat-message";
-          const botSpan = document.createElement("span");
-          botSpan.className = "bot";
-          botSpan.innerText = "Respuesta:";
-          const messageSpan = document.createElement("span");
-          messageSpan.className = "message";
-          botMessage.appendChild(botSpan);
-          botMessage.appendChild(document.createTextNode(" "));
-          botMessage.appendChild(messageSpan);
-          chatContainer.appendChild(botMessage);
+      try {
+        if (streamMode) {
+          // Modo streaming SSE
+          const response = await fetch("/predict", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              prompt: prompt,
+              stream: true,
+              max_length: 50,
+              num_return_sequences: 1,
+              temperature: 0.7,
+            }),
+          });
 
-          try {
-            if (streamMode) {
-              // Modo streaming SSE
-              const response = await fetch("/predict", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  prompt: prompt,
-                  stream: true,
-                  max_length: 50,
-                  num_return_sequences: 1,
-                  temperature: 0.7,
-                }),
-              });
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
 
-              const reader = response.body.getReader();
-              const decoder = new TextDecoder();
-              let buffer = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop(); // Guardar línea incompleta
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop(); // Guardar línea incompleta
-
-                for (const line of lines) {
-                  if (line.startsWith("data: ")) {
-                    const data = line.slice(6);
-                    if (data === "[DONE]") {
-                      break;
-                    }
-                    messageSpan.innerText += data + " ";
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                  }
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const data = line.slice(6);
+                if (data === "[DONE]") {
+                  break;
                 }
-              }
-            } else {
-              // Modo normal (sin streaming)
-              const response = await fetch("/predict", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  prompt: prompt,
-                  stream: false,
-                  max_length: 50,
-                  num_return_sequences: 1,
-                  temperature: 0.7,
-                }),
-              });
-              const data = await response.json();
-              if (data.generated_text) {
-                messageSpan.innerText = data.generated_text;
-              } else {
-                messageSpan.innerText = "Error: " + (data.detail || "Unknown");
+                messageContent.innerText += data + " ";
+                chatContainer.scrollTop = chatContainer.scrollHeight;
               }
             }
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-          } catch (err) {
-            messageSpan.innerText = "Error: " + err;
           }
-        });
-
-      // Función para enviar la conversación completa como feedback
-      document
-        .getElementById("send-full-feedback")
-        .addEventListener("click", async function () {
-          const chatContainer = document.getElementById("chat-container");
-          // Recopilar el texto de cada mensaje en el contenedor
-          const messagesHTML = Array.from(
-            chatContainer.getElementsByClassName("chat-message")
-          )
-            .map((msg) => msg.innerText)
-            .join("\n");
-
-          const feedbackStatus = document.getElementById("feedback-status");
-          feedbackStatus.innerText = "Enviando conversación completa...";
-
-          try {
-            // Enviar la conversación al endpoint `/feedback`
-            const response = await fetch("http://localhost:8000/feedback", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ text: messagesHTML }),
-            });
-            const data = await response.json();
-            if (response.ok) {
-              feedbackStatus.innerText = "Conversación enviada para feedback.";
-            } else {
-              feedbackStatus.innerText =
-                "Error al enviar feedback: " + (data.detail || data.error);
-            }
-          } catch (err) {
-            feedbackStatus.innerText = "Error: " + err;
+        } else {
+          // Modo normal (sin streaming)
+          const response = await fetch("/predict", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              prompt: prompt,
+              stream: false,
+              max_length: 50,
+              num_return_sequences: 1,
+              temperature: 0.7,
+            }),
+          });
+          const data = await response.json();
+          if (data.generated_text) {
+            messageContent.innerText = data.generated_text;
+          } else {
+            messageContent.innerText = "Error: " + (data.detail || "Unknown");
           }
+        }
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      } catch (err) {
+        messageContent.innerText = "Error: " + err;
+      }
+    });
+
+  // Función para enviar la conversación completa como feedback
+  document
+    .getElementById("send-full-feedback")
+    .addEventListener("click", async function () {
+      const chatContainer = document.getElementById("chat-container");
+      // Recopilar el texto de cada mensaje en el contenedor
+      const messages = Array.from(
+        chatContainer.getElementsByClassName("message")
+      )
+        .map((msg) => msg.innerText)
+        .join("\n");
+
+      const feedbackStatus = document.getElementById("feedback-status");
+      feedbackStatus.innerHTML =
+        '<span class="badge badge-info">Enviando...</span>';
+
+      try {
+        // Enviar la conversación al endpoint `/feedback`
+        const response = await fetch("/feedback", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ text: messages }),
         });
-    </script>
-  </body>
-</html>
+        const data = await response.json();
+        if (response.ok) {
+          feedbackStatus.innerHTML =
+            '<span class="badge badge-success">Feedback enviado ✓</span>';
+        } else {
+          feedbackStatus.innerHTML =
+            '<span class="badge badge-error">Error: ' +
+            (data.detail || data.error) +
+            "</span>";
+        }
+      } catch (err) {
+        feedbackStatus.innerHTML =
+          '<span class="badge badge-error">Error: ' + err + "</span>";
+      }
+    });
+</script>
+{% endblock %}

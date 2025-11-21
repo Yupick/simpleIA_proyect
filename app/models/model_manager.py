@@ -38,7 +38,7 @@ def load_model(force: bool = False):
         try:
             if provider == "hf":
                 logger.info(f"[HF] Loading model: {model_name} on {device}")
-                _tokenizer = AutoTokenizer.from_pretrained(model_name)
+                _tokenizer = AutoTokenizer.from_pretrained(model_name, clean_up_tokenization_spaces=True)
                 _model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
                 _provider_instance = None
             elif provider == "claude":

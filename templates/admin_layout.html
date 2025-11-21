@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}Panel Admin - {{ app_name | default('SimpleIA') }}{%
+      endblock %}
+    </title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="stylesheet" href="/static/admin.css" />
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    <!-- Toggle Button for Mobile -->
+    <button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()">
+      ☰
+    </button>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div
+      class="admin-sidebar-overlay"
+      id="sidebarOverlay"
+      onclick="toggleAdminSidebar()"
+    ></div>
+
+    <!-- Admin Layout -->
+    <div class="admin-layout">
+      <!-- Sidebar -->
+      <aside class="admin-sidebar" id="adminSidebar">
+        <div class="admin-sidebar-header">
+          <h1 class="admin-sidebar-title">Panel Admin</h1>
+        </div>
+        <nav>
+          <ul class="admin-sidebar-nav">
+            <li class="admin-nav-item">
+              <a
+                href="/admin"
+                class="admin-nav-link {% if active_tab == 'dashboard' %}active{% endif %}"
+              >
+                <span class="admin-nav-icon">📊</span>
+                <span>Dashboard</span>
+              </a>
+            </li>
+            <li class="admin-nav-item">
+              <a
+                href="/admin/users"
+                class="admin-nav-link {% if active_tab == 'users' %}active{% endif %}"
+              >
+                <span class="admin-nav-icon">👥</span>
+                <span>Usuarios</span>
+              </a>
+            </li>
+            <li class="admin-nav-item">
+              <a
+                href="/admin/feedback"
+                class="admin-nav-link {% if active_tab == 'feedback' %}active{% endif %}"
+              >
+                <span class="admin-nav-icon">💬</span>
+                <span>Feedback</span>
+              </a>
+            </li>
+            <li class="admin-nav-item">
+              <a
+                href="/admin/providers"
+                class="admin-nav-link {% if active_tab == 'providers' %}active{% endif %}"
+              >
+                <span class="admin-nav-icon">🔌</span>
+                <span>Providers</span>
+              </a>
+            </li>
+            <li class="admin-nav-item">
+              <a
+                href="/admin/stats"
+                class="admin-nav-link {% if active_tab == 'stats' %}active{% endif %}"
+              >
+                <span class="admin-nav-icon">📈</span>
+                <span>Estadísticas</span>
+              </a>
+            </li>
+            <li class="admin-nav-item">
+              <a
+                href="/admin/training"
+                class="admin-nav-link {% if active_tab == 'training' %}active{% endif %}"
+              >
+                <span class="admin-nav-icon">🎓</span>
+                <span>Entrenamiento</span>
+              </a>
+            </li>
+            <li class="admin-nav-item">
+              <a
+                href="/admin/config"
+                class="admin-nav-link {% if active_tab == 'config' %}active{% endif %}"
+              >
+                <span class="admin-nav-icon">⚙️</span>
+                <span>Configuración</span>
+              </a>
+            </li>
+            <li class="admin-nav-item">
+              <a href="/" class="admin-nav-link">
+                <span class="admin-nav-icon">🏠</span>
+                <span>Volver al Chat</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="admin-content">{% block content %}{% endblock %}</main>
+    </div>
+
+    <script>
+      function toggleAdminSidebar() {
+        const sidebar = document.getElementById("adminSidebar");
+        const overlay = document.getElementById("sidebarOverlay");
+        sidebar.classList.toggle("active");
+        overlay.classList.toggle("active");
+      }
+
+      // Close sidebar when clicking outside on mobile
+      window.addEventListener("resize", function () {
+        if (window.innerWidth > 768) {
+          document.getElementById("adminSidebar").classList.remove("active");
+          document.getElementById("sidebarOverlay").classList.remove("active");
+        }
+      });
+    </script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

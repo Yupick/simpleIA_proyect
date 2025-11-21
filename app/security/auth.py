@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 import jwt
 from passlib.context import CryptContext
-from fastapi import Header
+from fastapi import Header, HTTPException
 from jwt import PyJWTError
 from ..db.sqlite import get_user
 from dotenv import load_dotenv
@@ -43,3 +43,43 @@ def get_current_user_optional(authorization: Optional[str] = Header(None)) -> Op
         return get_user(username)
     except (ValueError, PyJWTError):
         return None
+
+def get_current_user(authorization: str = Header(..., alias="Authorization")) -> dict:
+    """
+    Dependencia para rutas protegidas que requieren autenticación obligatoria.
+    Lanza HTTPException si el token no es válido.
+    """
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid authentication scheme")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        user = get_user(username)
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except (ValueError, PyJWTError) as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
+def get_current_admin_user(authorization: str = Header(..., alias="Authorization")) -> dict:
+    """
+    Dependencia para rutas que requieren permisos de administrador.
+    Lanza HTTPException 403 si el usuario no es admin.
+    """
+    user = get_current_user(authorization)
+    if not user.get("is_admin", False):
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    return user
+
+def get_current_admin_user(authorization: str = Header(..., alias="Authorization")) -> dict:
+    """
+    Dependencia para rutas que requieren permisos de administrador.
+    Lanza HTTPException 403 si el usuario no es admin.
+    """
+    user = get_current_user(authorization)
+    if not user.get("is_admin", False):
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    return user

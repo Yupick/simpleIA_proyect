@@ -1,0 +1,328 @@
+{% extends "admin_layout.html" %} {% block title %}Gestión de Usuarios - Panel
+Admin{% endblock %} {% block content %}
+<div class="admin-header">
+  <h1 class="admin-header-title">Gestión de Usuarios</h1>
+  <div class="admin-header-actions">
+    <button class="btn btn-primary" onclick="refreshUsers()">
+      🔄 Actualizar
+    </button>
+  </div>
+</div>
+
+<!-- Filtros y búsqueda -->
+<div class="admin-table-actions">
+  <div class="admin-table-search">
+    <input
+      type="text"
+      id="searchInput"
+      class="form-control"
+      placeholder="Buscar usuario..."
+      onkeyup="filterUsers()"
+    />
+  </div>
+  <div class="admin-table-filters">
+    <select id="roleFilter" class="form-control" onchange="filterUsers()">
+      <option value="">Todos los roles</option>
+      <option value="admin">Administradores</option>
+      <option value="user">Usuarios</option>
+    </select>
+  </div>
+</div>
+
+<!-- Tabla de usuarios -->
+<div class="table-container">
+  <table class="table" id="usersTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Usuario</th>
+        <th>Rol</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="usersTableBody">
+      <tr>
+        <td colspan="4" class="text-center">Cargando usuarios...</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Paginación -->
+<div class="pagination" id="pagination">
+  <button class="pagination-btn" onclick="changePage(-1)" id="prevBtn">
+    ← Anterior
+  </button>
+  <span class="pagination-info" id="pageInfo">Página 1 de 1</span>
+  <button class="pagination-btn" onclick="changePage(1)" id="nextBtn">
+    Siguiente →
+  </button>
+</div>
+
+<!-- Modal de confirmación -->
+<div id="confirmModal" class="modal-overlay" style="display: none">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Confirmar Acción</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirmMessage">¿Está seguro de realizar esta acción?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" id="confirmBtn" onclick="confirmAction()">
+        Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de notificaciones -->
+<div
+  id="toast"
+  class="alert"
+  style="
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: none;
+    z-index: 3000;
+    min-width: 300px;
+  "
+></div>
+
+{% endblock %} {% block extra_js %}
+<script>
+  let currentPage = 1;
+  let totalPages = 1;
+  let allUsers = [];
+  let filteredUsers = [];
+  let pendingAction = null;
+
+  // Las cookies HttpOnly se envían automáticamente
+  function getToken() {
+    return "cookie-httponly"; // Placeholder
+  }
+
+  // Mostrar toast de notificación
+  function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = `alert alert-${type}`;
+    toast.style.display = "block";
+
+    setTimeout(() => {
+      toast.style.display = "none";
+    }, 3000);
+  }
+
+  // Cargar usuarios desde la API
+  async function loadUsers() {
+    try {
+      const response = await fetch(
+        `/api/admin/users?page=${currentPage}&limit=20`,
+        {
+          credentials: "include",
+        }
+      );
+
+      if (response.status === 403) {
+        showToast("No tienes permisos de administrador", "error");
+        setTimeout(() => (window.location.href = "/"), 2000);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Error al cargar usuarios");
+      }
+
+      const data = await response.json();
+      allUsers = data.users;
+      totalPages = data.pages;
+
+      filterUsers();
+      updatePagination();
+    } catch (error) {
+      console.error("Error:", error);
+      showToast("Error al cargar usuarios", "error");
+    }
+  }
+
+  // Filtrar usuarios según búsqueda y rol
+  function filterUsers() {
+    const searchTerm = document
+      .getElementById("searchInput")
+      .value.toLowerCase();
+    const roleFilter = document.getElementById("roleFilter").value;
+
+    filteredUsers = allUsers.filter((user) => {
+      const matchesSearch = user.username.toLowerCase().includes(searchTerm);
+      const matchesRole =
+        !roleFilter ||
+        (roleFilter === "admin" && user.is_admin) ||
+        (roleFilter === "user" && !user.is_admin);
+
+      return matchesSearch && matchesRole;
+    });
+
+    renderUsers();
+  }
+
+  // Renderizar tabla de usuarios
+  function renderUsers() {
+    const tbody = document.getElementById("usersTableBody");
+
+    if (filteredUsers.length === 0) {
+      tbody.innerHTML =
+        '<tr><td colspan="4" class="text-center">No se encontraron usuarios</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filteredUsers
+      .map(
+        (user) => `
+        <tr>
+            <td>${user.id}</td>
+            <td><strong>${user.username}</strong></td>
+            <td>
+                <span class="badge ${
+                  user.is_admin ? "badge-success" : "badge-info"
+                }">
+                    ${user.is_admin ? "Administrador" : "Usuario"}
+                </span>
+            </td>
+            <td class="admin-action-buttons">
+                ${
+                  !user.is_admin
+                    ? `
+                    <button class="btn btn-sm btn-secondary" onclick="toggleRole(${user.id}, '${user.username}', true)" title="Otorgar Admin">
+                        ⬆️ Hacer Admin
+                    </button>
+                `
+                    : `
+                    <button class="btn btn-sm btn-warning" onclick="toggleRole(${user.id}, '${user.username}', false)" title="Revocar Admin">
+                        ⬇️ Revocar Admin
+                    </button>
+                `
+                }
+                <button class="btn btn-sm btn-danger" onclick="deleteUser(${
+                  user.id
+                }, '${user.username}')" title="Eliminar Usuario">
+                    🗑️ Eliminar
+                </button>
+            </td>
+        </tr>
+    `
+      )
+      .join("");
+  }
+
+  // Cambiar rol de usuario
+  async function toggleRole(userId, username, makeAdmin) {
+    pendingAction = async () => {
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/role`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ is_admin: makeAdmin }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Error al actualizar rol");
+        }
+
+        showToast(`Rol actualizado para ${username}`, "success");
+        await loadUsers();
+      } catch (error) {
+        console.error("Error:", error);
+        showToast(error.message, "error");
+      }
+    };
+
+    const action = makeAdmin
+      ? "otorgar permisos de administrador a"
+      : "revocar permisos de administrador de";
+    document.getElementById(
+      "confirmMessage"
+    ).textContent = `¿Está seguro de ${action} el usuario "${username}"?`;
+    document.getElementById("confirmModal").style.display = "flex";
+  }
+
+  // Eliminar usuario
+  async function deleteUser(userId, username) {
+    pendingAction = async () => {
+      try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Error al eliminar usuario");
+        }
+
+        showToast(`Usuario "${username}" eliminado exitosamente`, "success");
+        await loadUsers();
+      } catch (error) {
+        console.error("Error:", error);
+        showToast(error.message, "error");
+      }
+    };
+
+    document.getElementById(
+      "confirmMessage"
+    ).textContent = `⚠️ ¿Está seguro de eliminar al usuario "${username}"? Esta acción no se puede deshacer.`;
+    document.getElementById("confirmModal").style.display = "flex";
+  }
+
+  // Confirmar acción del modal
+  async function confirmAction() {
+    if (pendingAction) {
+      closeModal();
+      await pendingAction();
+      pendingAction = null;
+    }
+  }
+
+  // Cerrar modal
+  function closeModal() {
+    document.getElementById("confirmModal").style.display = "none";
+    pendingAction = null;
+  }
+
+  // Actualizar paginación
+  function updatePagination() {
+    document.getElementById(
+      "pageInfo"
+    ).textContent = `Página ${currentPage} de ${totalPages}`;
+    document.getElementById("prevBtn").disabled = currentPage === 1;
+    document.getElementById("nextBtn").disabled = currentPage === totalPages;
+  }
+
+  // Cambiar página
+  function changePage(delta) {
+    const newPage = currentPage + delta;
+    if (newPage >= 1 && newPage <= totalPages) {
+      currentPage = newPage;
+      loadUsers();
+    }
+  }
+
+  // Refrescar usuarios
+  function refreshUsers() {
+    currentPage = 1;
+    loadUsers();
+  }
+
+  // Cargar usuarios al iniciar
+  document.addEventListener("DOMContentLoaded", () => {
+    loadUsers();
+  });
+</script>
+{% endblock %}

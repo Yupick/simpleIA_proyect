@@ -2,31 +2,92 @@
 
 Este proyecto implementa un sistema LLM modular con FastAPI y Hugging Face Transformers, diseñado con la filosofía local-first: su función principal es correr modelos en tu propia máquina, con la opción de integrar modelos hospedados en la nube mediante una capa de proveedores.
 
-Características clave
+## Características M1 (Completado)
 
-- Local primero: ejecuta e infiere con modelos locales (CPU o GPU si disponible).
-- Soporte multi-proveedor (en progreso): arquitectura preparada para integrar servicios externos (p. ej., Claude, OpenAI) sin cambiar el código de negocio.
-- API modular: endpoints separados por dominio (auth, predict, model, feedback).
-- Autenticación JWT y almacenamiento en SQLite.
-- Feedback para reentrenamiento y entrenamiento unificado básico.
-- Rate limiting simple para `/predict` configurable por entorno.
+- ✅ **Local primero**: ejecuta e infiere con modelos locales (CPU o GPU si disponible)
+- ✅ **API modular**: endpoints separados por dominio (auth, predict, model, feedback)
+- ✅ **Autenticación JWT** y almacenamiento en SQLite
+- ✅ **Feedback** para reentrenamiento
+- ✅ **Rate limiting** simple para `/predict` configurable por entorno
+- ✅ **Sanitización XSS** en feedback
+- ✅ **Tests básicos**: autenticación, predicción, feedback, métricas
+
+## Características M2 (Completado) 🚀
+
+### Seguridad Mejorada
+
+- ✅ **Cookies Secure** condicionales según `ENVIRONMENT` (production/development)
+- ✅ **datetime.now(timezone.utc)** en lugar de utcnow deprecated
+- ✅ **Sanitización XSS avanzada** con html.escape y regex
+
+### Configuración Modernizada
+
+- ✅ **Pydantic Settings V2** con SettingsConfigDict
+- ✅ **Lifespan events** (@asynccontextmanager) reemplaza @on_event deprecated
+- ✅ **Selección dispositivo** (CPU/CUDA) via settings.DEVICE
+
+### Providers Multi-LLM
+
+- ✅ **ClaudeProvider**: integración con Anthropic API usando httpx
+- ✅ **OpenAIProvider**: integración con OpenAI API
+- ✅ **HuggingFaceProvider**: local transformers
+- ✅ **Switching dinámico** via config.provider (hf/claude/openai)
+
+### Performance y Caché
+
+- ✅ **Cache LRU** para respuestas LLM con TTL y hash SHA256
+- ✅ **Streaming SSE**: StreamingResponse para tokens en tiempo real
+- ✅ **Cache hit/miss tracking** con estadísticas
+
+### Embeddings y Búsqueda Semántica
+
+- ✅ **sentence-transformers**: modelo all-MiniLM-L6-v2 (384 dims)
+- ✅ **FAISS vector store**: búsqueda L2 similarity
+- ✅ **Endpoints /embed**: encode, add, search, save, load, stats
+- ✅ **Persistencia**: save/load índice FAISS + documentos pickle
+
+### Dashboard y Métricas
+
+- ✅ **Dashboard admin**: Chart.js con gráficos de requests, latency, status, feedback
+- ✅ **Métricas training**: SQLite para loss por epoch
+- ✅ **Endpoints /training**: runs, metrics, latest
+- ✅ **Auto-refresh** dashboard cada 30s
+
+### Infraestructura
+
+- ✅ **Docker completo**: Dockerfile multi-stage + docker-compose.yml
+- ✅ **.dockerignore** optimizado
+- ✅ **run_llm.sh mejorado**: comandos all/trainer/api/client/line/admin
+- ✅ **admin_cli.py**: herramientas CLI (feedback list, model reload)
+- ✅ **.gitignore completo**: modelos, embeddings, caches, notebooks
+
+### Tests M2 (Creados)
+
+- ✅ **test_providers.py**: ClaudeProvider, OpenAIProvider, initialization
+- ✅ **test_cache.py**: LRU eviction, TTL, stats, hash collision
+- ✅ **test_streaming.py**: SSE events, cache integration, error handling
+- ✅ **test_embeddings.py**: encode, search, FAISS, endpoints
+- ⚠️ **Nota**: Tests M2 requieren ajustes para coincidir con implementación real; tests M1 (7) pasan correctamente
 
 Estructura del proyecto (resumen)
 
-- `config/`: configuración (`config.json`).
-- `app/`: código de la aplicación (API modular, seguridad, modelo, DB, providers, training).
-  - `app/main.py`: entrypoint de la API modular.
-  - `app/api/routers/`: rutas `auth`, `predict`, `model`, `feedback`.
-  - `app/models/`: gestor de modelo (`model_manager.py`).
-  - `app/security/`: JWT y hashing.
-  - `app/db/`: SQLite helpers.
-  - `app/providers/`: abstracciones de proveedores (HF listo; externos en progreso).
-  - `app/training/`: esqueleto de trainer unificado.
-- `model_llm/`: checkpoints y modelos entrenados/locales.
-- `templates/`: HTML para cliente web simple.
-- `feedback/`: bases SQLite de usuarios y feedback.
-- `requirements.txt`: dependencias.
-- `run_llm.sh` / `setup_env.sh`: scripts de arranque y entorno.
+- `config/`: configuración (`config.json`)
+- `app/`: código de la aplicación (API modular, seguridad, modelo, DB, providers, training)
+  - `app/main.py`: entrypoint de la API modular con lifespan events
+  - `app/api/routers/`: rutas `auth`, `predict`, `model`, `feedback`, `embeddings`, `admin`, `training`
+  - `app/models/`: gestor de modelo (`model_manager.py`), embeddings (`embeddings.py`)
+  - `app/security/`: JWT y hashing con get_current_user
+  - `app/db/`: SQLite helpers (`sqlite.py`, `training_metrics.py`)
+  - `app/providers/`: ClaudeProvider, OpenAIProvider, HuggingFaceProvider
+  - `app/training/`: trainer unificado
+  - `app/core/`: cache LRU, settings Pydantic V2, config, logging, metrics, rate_limit
+- `model_llm/`: checkpoints y modelos entrenados/locales
+- `templates/`: HTML para cliente web (index.html con streaming) y dashboard admin
+- `feedback/`: bases SQLite de usuarios, feedback y métricas training
+- `data/embeddings/`: índices FAISS y documentos
+- `requirements.txt`: dependencias (numpy<2.0.0, sentence-transformers, faiss-cpu)
+- `run_llm.sh`: script control servicios (all/trainer/api/client/line/admin)
+- `Dockerfile` + `docker-compose.yml`: despliegue containerizado
 
 Requisitos
 
@@ -53,19 +114,30 @@ Configuración (.env y config.json)
 cp .env.example .env
 ```
 
-- `SECRET_KEY`: cambia por un valor seguro.
-- `DEFAULT_MODEL`: nombre o ruta local del modelo (p. ej., `gpt2` o `model_llm/mi_modelo_local`).
-- `NUM_TRAIN_EPOCHS`, `TRAIN_BATCH_SIZE`: parámetros de entrenamiento por defecto.
+Variables importantes:
+
+- `SECRET_KEY`: cambia por un valor seguro (generado con `secrets.token_urlsafe(32)`)
+- `ENVIRONMENT`: `development` o `production` (activa cookies Secure)
+- `DEFAULT_MODEL`: nombre o ruta local del modelo (p. ej., `gpt2` o `model_llm/mi_modelo_local`)
+- `DEVICE`: `cpu` o `cuda` (selección automática GPU si disponible)
+- `ANTHROPIC_API_KEY`: API key para ClaudeProvider (opcional)
+- `OPENAI_API_KEY`: API key para OpenAIProvider (opcional)
+- `NUM_TRAIN_EPOCHS`, `TRAIN_BATCH_SIZE`: parámetros de entrenamiento por defecto
 
 2. `config/config.json` controla principalmente el modelo seleccionado en caliente:
 
 ```json
 {
-  "selected_model": "flax-community/gpt-2-spanish"
+  "selected_model": "flax-community/gpt-2-spanish",
+  "provider": "hf"
 }
 ```
 
-Puedes cambiarlo por una carpeta local guardada en `model_llm/`.
+Providers disponibles:
+
+- `hf`: HuggingFace local (transformers)
+- `claude`: Anthropic Claude API (requiere ANTHROPIC_API_KEY)
+- `openai`: OpenAI API (requiere OPENAI_API_KEY)
 
 Proveedor LLM
 
@@ -83,6 +155,16 @@ Rate Limiting
 Ejecutar (API modular local)
 
 ```bash
+# Opción 1: Script run_llm.sh (recomendado)
+./run_llm.sh all          # API + Cliente Web
+./run_llm.sh api          # Solo API en :8000
+./run_llm.sh client       # Solo Cliente Web en :8001
+./run_llm.sh trainer      # Entrenador
+./run_llm.sh line         # Cliente CLI
+./run_llm.sh admin feedback  # Listar feedback
+./run_llm.sh admin reload    # Recargar modelo
+
+# Opción 2: Uvicorn directo
 source venv/bin/activate
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -91,12 +173,42 @@ Salud del servicio: `GET http://localhost:8000/health`
 
 Endpoints principales
 
-- `POST /auth/register`: registrar usuario. Body JSON `{ "username", "password" }` o `application/x-www-form-urlencoded` para `/auth/login`.
-- `POST /auth/login`: login OAuth2 Password → `{ access_token, token_type }`.
-- `GET /model`: modelo actual.
-- `POST /model`: cambiar modelo `{ "model_name": "gpt2" }` (acepta ruta local o id HF). Recarga el modelo.
-- `POST /predict`: inferencia `{ "prompt", "max_length", "num_return_sequences", "temperature" }`.
-- `POST /feedback`: almacenar feedback `{ "text" }` (límite 5000 chars).
+### Autenticación
+
+- `POST /auth/register`: registrar usuario. Body JSON `{ "username", "password" }`
+- `POST /auth/login`: login OAuth2 Password → `{ access_token, token_type }`
+
+### Modelo
+
+- `GET /model`: modelo actual y provider
+- `POST /model`: cambiar modelo `{ "model_name": "gpt2" }` (acepta ruta local o id HF). Recarga el modelo
+
+### Predicción
+
+- `POST /predict`: inferencia `{ "prompt", "max_length", "num_return_sequences", "temperature", "stream": bool }`
+  - `stream=false`: respuesta JSON completa
+  - `stream=true`: StreamingResponse SSE (text/event-stream)
+
+### Embeddings (M2)
+
+- `POST /embed/encode`: generar embeddings `{ "texts": ["text1", "text2"] }`
+- `POST /embed/add`: agregar documentos al índice `{ "documents": ["doc1", "doc2"] }`
+- `POST /embed/search`: buscar similares `{ "query": "text", "k": 5 }`
+- `POST /embed/save`: guardar índice FAISS
+- `POST /embed/load`: cargar índice guardado
+- `GET /embed/stats`: estadísticas del índice
+
+### Dashboard y Métricas (M2)
+
+- `GET /admin`: dashboard Chart.js (requiere autenticación)
+- `GET /metrics`: métricas Prometheus-style
+- `GET /training/runs`: listar runs de entrenamiento
+- `GET /training/runs/{id}/metrics`: métricas de un run
+- `GET /training/latest`: último run de entrenamiento
+
+### Feedback
+
+- `POST /feedback`: almacenar feedback `{ "text" }` (límite 5000 chars, sanitización XSS)
 
 Ejemplos rápidos (curl)
 
@@ -125,23 +237,89 @@ curl -X POST http://localhost:8000/model \
 
 Local vs. nube (providers)
 
-- Por defecto se usa Hugging Face local (`transformers.from_pretrained`). Si apuntas a una carpeta en `model_llm/`, se cargará desde disco.
-- La capa `app/providers/` permite añadir proveedores externos. Ej.: un `ClaudeProvider` podría consumir un endpoint remoto con una API key definida en `.env`. La API enrutaría las solicitudes sin tocar tu lógica de negocio.
+- **HuggingFace (hf)**: Modelos locales con `transformers.from_pretrained`. Si apuntas a carpeta en `model_llm/`, se carga desde disco.
+- **Claude (claude)**: Integración con Anthropic API via httpx. Requiere `ANTHROPIC_API_KEY` en `.env`.
+- **OpenAI (openai)**: Integración con OpenAI API via httpx. Requiere `OPENAI_API_KEY` en `.env`.
+
+Cambiar provider en runtime:
+
+```bash
+# Via config.json
+echo '{"selected_model":"gpt2","provider":"hf"}' > config/config.json
+
+# O via admin CLI
+./run_llm.sh admin reload
+```
+
+La arquitectura `app/providers/` permite añadir proveedores externos sin cambiar lógica de negocio.
 
 Entrenamiento local (básico)
 
 - Opción 1 (legacy): usar `app/llm_trainer.py` existentes para flujos de fine-tuning con ficheros en `trainer_llm/`.
 - Opción 2 (unificado en progreso): `app/training/trainer.py` expone una función `train(model_name, lines)` para integrar un pipeline más limpio. Los checkpoints se guardan en `model_llm/`; luego puedes seleccionarlos con `POST /model` indicando la ruta local.
 
-Cliente web y CLI (opcionales)
+Cliente web y CLI
 
-- Cliente web simple: `app/llm_client.py` en puerto 8001. Requiere que la API esté corriendo en 8000. Nota: las rutas de auth del cliente legacy pueden diferir de las nuevas (`/auth/*`).
-- CLI: `app/llm_client_line.py` para probar prompts rápidos contra `/predict`.
+- **Cliente web**: `http://localhost:8001` - Interfaz HTML con streaming SSE, autenticación JWT via cookies
+- **Cliente CLI**: `./run_llm.sh line` - Prompt interactivo contra `/predict`
+- **Admin CLI**: `./run_llm.sh admin feedback|reload` - Herramientas administración
+
+## Caché y Performance (M2)
+
+### Cache LRU
+
+- **Hash SHA256** de prompt+params como key
+- **TTL configurable** (default 3600s)
+- **Eviction LRU** al alcanzar max_size
+- **Estadísticas**: hits, misses, hit_rate via `/metrics`
+
+### Streaming SSE
+
+- **Server-Sent Events** para tokens en tiempo real
+- **Formato**: `data: <token>\n\n`
+- **Cliente JS** con EventSource simulado
+- **Cache bypass** automático en streaming
+
+## Embeddings y Búsqueda (M2)
+
+### Modelo
+
+- **sentence-transformers/all-MiniLM-L6-v2**
+- **384 dimensiones**
+- **Normalización L2** automática
+
+### FAISS Vector Store
+
+- **IndexFlatL2** para búsqueda exhaustiva
+- **Persistencia** a disco (.faiss + .pkl)
+- **Add documents** con embeddings batch
+- **Search** por similitud coseno/L2
+
+### Casos de uso
+
+- Búsqueda semántica en documentación
+- RAG (Retrieval Augmented Generation)
+- Similar questions matching
+- Knowledge base search
 
 Seguridad
 
-- Define `SECRET_KEY` en `.env` y usa HTTPS en producción (cookies seguras, SameSite, etc.).
-- Agrega rate limiting/middleware anti-abuso si expones `/predict` públicamente.
+- ✅ **SECRET_KEY** en `.env` - JWT signing
+- ✅ **HTTPS** en producción - cookies seguras condicionales
+- ✅ **Sanitización XSS** - html.escape + regex en feedback
+- ✅ **Rate limiting** - configurable por entorno (default 10 req/60s)
+- ✅ **Autenticación JWT** - tokens con expiración
+- ✅ **CORS configurado** - origins permitidos via settings
+- ⚠️ **Tokens en cookies** - SameSite=Lax, Secure en production
+- ⚠️ **Validación inputs** - Pydantic models en todos los endpoints
+
+Recomendaciones producción:
+
+1. Generar SECRET_KEY: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
+2. Set `ENVIRONMENT=production` en `.env`
+3. Usar reverse proxy (nginx/traefik) con HTTPS
+4. Rate limiting por IP en load balancer
+5. Logs centralizados y monitoring
 
 Notas de migración
 
@@ -218,13 +396,91 @@ deploy:
 
 Solución de problemas
 
-- Memoria insuficiente al cargar modelos grandes: cambia `DEFAULT_MODEL`/`selected_model` por un modelo más pequeño (ej. `gpt2`), usa CPU o activa GPU si disponible.
-- Dependencias: ejecuta `pip install -r requirements.txt` tras activar el entorno virtual.
+### Memoria insuficiente
 
-Licencia
-Integración futura Claude / OpenAI
+- Cambiar `DEFAULT_MODEL`/`selected_model` por modelo más pequeño (ej. `gpt2`)
+- Usar `DEVICE=cpu` si GPU no disponible
+- Reducir `TRAIN_BATCH_SIZE` en entrenamiento
 
-- Añadirás un provider específico implementando la interfaz en `app/providers/`.
-- Variables esperadas (ejemplos futuros): `CLAUDE_API_KEY`, `OPENAI_API_KEY`.
-- Endpoint `/model` permitirá cambiar modelo/proveedor sin reiniciar.
-- No especificada. Añade un archivo `LICENSE` si corresponde.
+### Dependencias
+
+```bash
+pip install -r requirements.txt
+# Si falla NumPy/torch:
+pip install "numpy<2.0.0" torch==2.2.1 --force-reinstall
+```
+
+### Provider switching no funciona
+
+- Verificar `config/config.json` tiene `provider` correcto
+- Reload modelo: `./run_llm.sh admin reload`
+- Check logs: API key presente para claude/openai
+
+### Embeddings lentos
+
+- Primera ejecución descarga modelo (3GB)
+- Cache en `~/.cache/torch/sentence_transformers/`
+- Usar `DEVICE=cuda` si GPU disponible
+
+### Tests fallan
+
+```bash
+# Tests M1 (deben pasar):
+venv/bin/python -m pytest tests/test_auth.py tests/test_predict.py tests/test_feedback.py -v
+
+# Tests M2 (requieren ajustes):
+# Actualmente creados pero necesitan alinearse con implementación real
+```
+
+### Docker
+
+- **Permisos volúmenes**: `chmod 777 feedback/ model_llm/`
+- **GPU no detectada**: instalar nvidia-docker, usar imagen CUDA
+- **Modelo no carga**: verificar DEFAULT_MODEL válido o en cache
+
+## Próximos Pasos (M3 - Futuro)
+
+- [ ] **Tests M2 completos**: ajustar test_providers.py, test_cache.py, test_streaming.py, test_embeddings.py
+- [ ] **RAG Pipeline**: integración embeddings + retrieval + generation
+- [ ] **Fine-tuning UI**: dashboard para entrenar modelos custom
+- [ ] **Multi-model inference**: servir múltiples modelos simultáneamente
+- [ ] **Async streaming**: mejorar performance con async generators
+- [ ] **Prometheus metrics**: exportar métricas detalladas
+- [ ] **WebSocket support**: alternativa a SSE para streaming
+- [ ] **Model quantization**: GGUF, AWQ para modelos más ligeros
+- [ ] **Kubernetes deployment**: Helm charts y manifests
+- [ ] **CI/CD pipeline**: GitHub Actions para tests y deployment
+
+## Licencia
+
+No especificada. Añade un archivo `LICENSE` si corresponde.
+
+## Contribuir
+
+1. Fork el repositorio
+2. Crear branch feature: `git checkout -b feature/amazing-feature`
+3. Commit cambios: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Abrir Pull Request
+
+## Changelog
+
+### M2 (Noviembre 2025)
+
+- ✅ Providers Claude/OpenAI integrados
+- ✅ Cache LRU con TTL
+- ✅ Streaming SSE
+- ✅ Embeddings FAISS + sentence-transformers
+- ✅ Dashboard admin Chart.js
+- ✅ Docker production-ready
+- ✅ Pydantic Settings V2
+- ✅ Security hardening (XSS, cookies secure)
+
+### M1 (Inicial)
+
+- ✅ API modular FastAPI
+- ✅ Autenticación JWT
+- ✅ Rate limiting
+- ✅ Feedback storage
+- ✅ HuggingFace integration
+- ✅ Tests básicos

@@ -1,0 +1,209 @@
+{% extends "admin_layout.html" %} {% block title %}Feedback - Panel Admin{%
+endblock %} {% block content %}
+<div class="admin-header">
+  <h1 class="admin-header-title">💬 Gestión de Feedback</h1>
+  <div class="admin-header-actions">
+    <input
+      type="text"
+      id="searchInput"
+      class="form-control"
+      placeholder="🔍 Buscar feedback..."
+      style="max-width: 300px; display: inline-block"
+    />
+    <button class="btn btn-primary" onclick="loadFeedback()">
+      🔄 Actualizar
+    </button>
+  </div>
+</div>
+
+<!-- Tabla de feedback -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Todos los Feedbacks</h3>
+  </div>
+  <div class="card-body">
+    <div id="feedbackTableContainer">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Usuario</th>
+            <th>Comentario</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="feedbackTableBody">
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 2rem">
+              <div class="spinner"></div>
+              Cargando feedback...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div id="confirmModal" class="modal" style="display: none">
+  <div class="modal-content">
+    <h3>Confirmar Acción</h3>
+    <p id="confirmMessage"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmAction()">
+        Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de notificaciones -->
+<div
+  id="toast"
+  class="alert"
+  style="
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: none;
+    z-index: 3000;
+    min-width: 300px;
+  "
+></div>
+
+{% endblock %} {% block extra_js %}
+<script>
+  let allFeedback = [];
+  let pendingAction = null;
+
+  // Mostrar toast
+  function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = `alert alert-${type}`;
+    toast.style.display = "block";
+    setTimeout(() => (toast.style.display = "none"), 3000);
+  }
+
+  // Cargar feedback
+  async function loadFeedback() {
+    try {
+      const searchTerm = document.getElementById("searchInput").value;
+      const url = `/api/admin/feedback${
+        searchTerm ? "?search=" + encodeURIComponent(searchTerm) : ""
+      }`;
+
+      const response = await fetch(url, {
+        credentials: "include",
+      });
+
+      if (response.status === 403) {
+        showToast("No tienes permisos de administrador", "error");
+        setTimeout(() => (window.location.href = "/"), 2000);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Error al cargar feedback");
+      }
+
+      allFeedback = await response.json();
+      renderFeedback();
+    } catch (error) {
+      console.error("Error:", error);
+      showToast("Error al cargar feedback", "error");
+    }
+  }
+
+  // Renderizar tabla
+  function renderFeedback() {
+    const tbody = document.getElementById("feedbackTableBody");
+
+    if (allFeedback.length === 0) {
+      tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 2rem; color: #657786;">
+                    No hay feedback registrado
+                </td>
+            </tr>
+        `;
+      return;
+    }
+
+    tbody.innerHTML = allFeedback
+      .map(
+        (fb) => `
+        <tr>
+            <td>${fb.id}</td>
+            <td><strong>${fb.username || "Anónimo"}</strong></td>
+            <td style="max-width: 400px;">${fb.text}</td>
+            <td>${new Date(fb.timestamp).toLocaleString("es-ES")}</td>
+            <td class="admin-action-buttons">
+                <button class="btn btn-sm btn-danger" onclick="deleteFeedback(${
+                  fb.id
+                }, '${fb.text.substring(0, 30)}...')" title="Eliminar">
+                    🗑️ Eliminar
+                </button>
+            </td>
+        </tr>
+    `
+      )
+      .join("");
+  }
+
+  // Eliminar feedback
+  async function deleteFeedback(feedbackId, preview) {
+    pendingAction = async () => {
+      try {
+        const response = await fetch(`/api/admin/feedback/${feedbackId}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Error al eliminar feedback");
+        }
+
+        showToast("Feedback eliminado exitosamente", "success");
+        await loadFeedback();
+      } catch (error) {
+        console.error("Error:", error);
+        showToast(error.message, "error");
+      }
+    };
+
+    document.getElementById(
+      "confirmMessage"
+    ).textContent = `¿Está seguro de eliminar este feedback: "${preview}"?`;
+    document.getElementById("confirmModal").style.display = "flex";
+  }
+
+  // Cerrar modal
+  function closeModal() {
+    document.getElementById("confirmModal").style.display = "none";
+    pendingAction = null;
+  }
+
+  // Confirmar acción
+  async function confirmAction() {
+    closeModal();
+    if (pendingAction) {
+      await pendingAction();
+      pendingAction = null;
+    }
+  }
+
+  // Búsqueda en tiempo real
+  document.getElementById("searchInput").addEventListener("input", () => {
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(loadFeedback, 500);
+  });
+
+  // Cargar al iniciar
+  document.addEventListener("DOMContentLoaded", loadFeedback);
+</script>
+{% endblock %}

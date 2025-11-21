@@ -35,6 +35,7 @@ virtualenv/
 .env
 .env.*
 !.env.example
+config/config.json
 
 # Bases de datos (desarrollo)
 *.sqlite

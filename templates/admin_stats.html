@@ -1,0 +1,271 @@
+{% extends "admin_layout.html" %} {% block title %}Estadísticas - Panel Admin{%
+endblock %} {% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %} {% block content %}
+<div class="admin-header">
+  <h1 class="admin-header-title">📈 Estadísticas Detalladas</h1>
+  <div class="admin-header-actions">
+    <button class="btn btn-primary" onclick="loadAllStats()">
+      🔄 Actualizar
+    </button>
+  </div>
+</div>
+
+<!-- Cards de estadísticas principales -->
+<div class="admin-stats-grid">
+  <div class="admin-stat-card">
+    <div class="admin-stat-label">Total Usuarios</div>
+    <div class="admin-stat-value" id="stat-users">0</div>
+    <div class="admin-stat-icon">👥</div>
+  </div>
+
+  <div class="admin-stat-card">
+    <div class="admin-stat-label">Administradores</div>
+    <div class="admin-stat-value" id="stat-admins">0</div>
+    <div class="admin-stat-icon">👑</div>
+  </div>
+
+  <div class="admin-stat-card">
+    <div class="admin-stat-label">Total Feedback</div>
+    <div class="admin-stat-value" id="stat-feedback">0</div>
+    <div class="admin-stat-icon">💬</div>
+  </div>
+
+  <div class="admin-stat-card">
+    <div class="admin-stat-label">Provider Actual</div>
+    <div class="admin-stat-value" id="stat-provider" style="font-size: 1.5rem">
+      -
+    </div>
+    <div class="admin-stat-icon">🔌</div>
+  </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row mt-lg">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Distribución de Usuarios</h3>
+      </div>
+      <div class="card-body">
+        <canvas id="usersChart" style="max-height: 300px"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Uso de Base de Datos</h3>
+      </div>
+      <div class="card-body">
+        <canvas id="dbChart" style="max-height: 300px"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Información detallada -->
+<div class="card mt-lg">
+  <div class="card-header">
+    <h3 class="card-title">Información del Sistema</h3>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4">
+        <div class="form-group">
+          <label class="form-label">Provider:</label>
+          <p id="info-provider" style="font-weight: bold">-</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group">
+          <label class="form-label">Modelo:</label>
+          <p id="info-model" style="font-weight: bold">-</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group">
+          <label class="form-label">Base de Datos:</label>
+          <p id="info-db-total" style="font-weight: bold">-</p>
+        </div>
+      </div>
+    </div>
+    <div class="row mt-md">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="form-label">DB Usuarios:</label>
+          <p id="info-users-db" style="font-weight: bold">-</p>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="form-label">DB Feedback:</label>
+          <p id="info-feedback-db" style="font-weight: bold">-</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div
+  id="toast"
+  class="alert"
+  style="
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: none;
+    z-index: 3000;
+    min-width: 300px;
+  "
+></div>
+
+{% endblock %} {% block extra_js %}
+<script>
+  let usersChart = null;
+  let dbChart = null;
+
+  function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = `alert alert-${type}`;
+    toast.style.display = "block";
+    setTimeout(() => (toast.style.display = "none"), 3000);
+  }
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  }
+
+  async function loadAllStats() {
+    try {
+      const response = await fetch("/api/admin/stats", {
+        credentials: "include",
+      });
+
+      if (response.status === 403) {
+        showToast("No tienes permisos de administrador", "error");
+        setTimeout(() => (window.location.href = "/"), 2000);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Error al cargar estadísticas");
+      }
+
+      const stats = await response.json();
+      updateStats(stats);
+      updateCharts(stats);
+    } catch (error) {
+      console.error("Error:", error);
+      showToast("Error al cargar estadísticas", "error");
+    }
+  }
+
+  function updateStats(stats) {
+    // Cards
+    document.getElementById("stat-users").textContent = stats.total_users || 0;
+    document.getElementById("stat-admins").textContent =
+      stats.total_admins || 0;
+    document.getElementById("stat-feedback").textContent =
+      stats.total_feedback || 0;
+    document.getElementById("stat-provider").textContent =
+      stats.current_provider || "-";
+
+    // Info detallada
+    document.getElementById("info-provider").textContent =
+      stats.current_provider || "-";
+    document.getElementById("info-model").textContent =
+      stats.current_model || "-";
+    document.getElementById("info-users-db").textContent = formatBytes(
+      stats.db_sizes?.users_db || 0
+    );
+    document.getElementById("info-feedback-db").textContent = formatBytes(
+      stats.db_sizes?.feedback_db || 0
+    );
+
+    const totalDb =
+      (stats.db_sizes?.users_db || 0) + (stats.db_sizes?.feedback_db || 0);
+    document.getElementById("info-db-total").textContent = formatBytes(totalDb);
+  }
+
+  function updateCharts(stats) {
+    // Gráfico de usuarios
+    const usersCtx = document.getElementById("usersChart").getContext("2d");
+    if (usersChart) usersChart.destroy();
+
+    usersChart = new Chart(usersCtx, {
+      type: "doughnut",
+      data: {
+        labels: ["Administradores", "Usuarios Normales"],
+        datasets: [
+          {
+            data: [
+              stats.total_admins || 0,
+              (stats.total_users || 0) - (stats.total_admins || 0),
+            ],
+            backgroundColor: ["#4A90E2", "#E8F4FD"],
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            position: "bottom",
+          },
+        },
+      },
+    });
+
+    // Gráfico de DB
+    const dbCtx = document.getElementById("dbChart").getContext("2d");
+    if (dbChart) dbChart.destroy();
+
+    dbChart = new Chart(dbCtx, {
+      type: "bar",
+      data: {
+        labels: ["Usuarios", "Feedback"],
+        datasets: [
+          {
+            label: "Tamaño (Bytes)",
+            data: [
+              stats.db_sizes?.users_db || 0,
+              stats.db_sizes?.feedback_db || 0,
+            ],
+            backgroundColor: ["#4A90E2", "#10B981"],
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            display: false,
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function (value) {
+                return formatBytes(value);
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", loadAllStats);
+</script>
+{% endblock %}

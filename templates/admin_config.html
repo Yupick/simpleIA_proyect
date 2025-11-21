@@ -1,0 +1,381 @@
+{% extends "admin_layout.html" %} {% block title %}Configuración - Panel Admin{%
+endblock %} {% block content %}
+<div class="admin-header">
+  <h1 class="admin-header-title">Configuración del Sistema</h1>
+  <div class="admin-header-actions">
+    <button class="btn btn-primary" onclick="loadConfig()">
+      🔄 Actualizar
+    </button>
+  </div>
+</div>
+
+<!-- Secciones de configuración -->
+<div class="admin-form-section">
+  <h3 class="admin-form-section-title">🎨 Personalización de Marca</h3>
+
+  <form id="brandForm" onsubmit="saveConfig(event, 'brand')">
+    <div class="admin-form-row">
+      <div class="form-group">
+        <label class="form-label">Nombre de la Aplicación</label>
+        <input
+          type="text"
+          id="app_name"
+          class="form-control"
+          placeholder="SimpleIA"
+          required
+        />
+        <small>Aparece en el título y navegación</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Color Principal</label>
+        <div style="display: flex; gap: 0.5rem">
+          <input
+            type="color"
+            id="primary_color"
+            style="width: 60px; height: 40px; border: none; cursor: pointer"
+          />
+          <input
+            type="text"
+            id="primary_color_text"
+            class="form-control"
+            placeholder="#4A90E2"
+            readonly
+          />
+        </div>
+        <small>Define el esquema de colores de la interfaz</small>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Logo Personalizado</label>
+      <div
+        class="file-upload-zone"
+        id="logoDropZone"
+        onclick="document.getElementById('logoInput').click()"
+      >
+        <div class="file-upload-icon">📷</div>
+        <p class="file-upload-text">
+          Click para seleccionar o arrastra tu logo aquí
+        </p>
+        <p class="file-upload-hint">
+          PNG, JPG, GIF o SVG. Tamaño recomendado: 200x50px
+        </p>
+      </div>
+      <input
+        type="file"
+        id="logoInput"
+        accept="image/*"
+        style="display: none"
+        onchange="uploadLogo(event)"
+      />
+      <div id="currentLogo" class="mt-md" style="display: none">
+        <p><strong>Logo actual:</strong></p>
+        <img
+          id="logoPreview"
+          src=""
+          alt="Logo"
+          style="
+            max-height: 100px;
+            border: 1px solid #e1e8ed;
+            padding: 0.5rem;
+            border-radius: 8px;
+          "
+        />
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">💾 Guardar Marca</button>
+  </form>
+</div>
+
+<div class="admin-form-section">
+  <h3 class="admin-form-section-title">🤖 Personalidad del Asistente</h3>
+
+  <form id="personalityForm" onsubmit="saveConfig(event, 'personality')">
+    <div class="admin-form-row">
+      <div class="form-group">
+        <label class="form-label">Nombre del Asistente</label>
+        <input
+          type="text"
+          id="llm_name"
+          class="form-control"
+          placeholder="Asistente"
+          required
+        />
+        <small>El LLM responderá usando este nombre</small>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Personalidad del Sistema</label>
+      <textarea
+        id="llm_personality"
+        class="form-control"
+        rows="4"
+        placeholder="Soy un asistente virtual..."
+        required
+      ></textarea>
+      <small
+        >Define cómo se presenta el asistente. Usa {llm_name} para insertar el
+        nombre dinámicamente.</small
+      >
+    </div>
+
+    <div class="alert alert-info">
+      <strong>💡 Ejemplo:</strong> "Soy {llm_name}, un asistente virtual
+      especializado en ayudarte con tus tareas. Soy amable, preciso y siempre
+      estoy dispuesto a aprender."
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      💾 Guardar Personalidad
+    </button>
+  </form>
+</div>
+
+<!-- Vista previa de cambios -->
+<div class="admin-form-section">
+  <h3 class="admin-form-section-title">👁️ Vista Previa</h3>
+  <div class="card">
+    <div class="card-body">
+      <p>
+        <strong>Aplicación:</strong> <span id="preview_app_name">SimpleIA</span>
+      </p>
+      <p>
+        <strong>Asistente:</strong> <span id="preview_llm_name">Asistente</span>
+      </p>
+      <p>
+        <strong>Color:</strong>
+        <span
+          id="preview_color"
+          style="
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+            background: #4a90e2;
+            border: 1px solid #ccc;
+          "
+        ></span>
+      </p>
+      <p><strong>Personalidad:</strong></p>
+      <p
+        id="preview_personality"
+        style="font-style: italic; color: #7f8c8d"
+      ></p>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de notificaciones -->
+<div
+  id="toast"
+  class="alert"
+  style="
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: none;
+    z-index: 3000;
+    min-width: 300px;
+  "
+></div>
+
+{% endblock %} {% block extra_js %}
+<script>
+  let currentConfig = {};
+
+  // Las cookies HttpOnly se envían automáticamente
+  function getToken() {
+    return "cookie-httponly"; // Placeholder
+  }
+
+  // Mostrar toast de notificación
+  function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = `alert alert-${type}`;
+    toast.style.display = "block";
+
+    setTimeout(() => {
+      toast.style.display = "none";
+    }, 3000);
+  }
+
+  // Cargar configuración actual
+  async function loadConfig() {
+    try {
+      const response = await fetch("/api/admin/config", {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al cargar configuración");
+      }
+
+      currentConfig = await response.json();
+
+      // Actualizar formularios
+      document.getElementById("app_name").value =
+        currentConfig.app_name || "SimpleIA";
+      document.getElementById("llm_name").value =
+        currentConfig.llm_name || "Asistente";
+      document.getElementById("llm_personality").value =
+        currentConfig.llm_personality || "";
+
+      const color = currentConfig.primary_color || "#4A90E2";
+      document.getElementById("primary_color").value = color;
+      document.getElementById("primary_color_text").value = color;
+
+      // Logo
+      if (currentConfig.logo_url) {
+        document.getElementById("currentLogo").style.display = "block";
+        document.getElementById("logoPreview").src = currentConfig.logo_url;
+      }
+
+      // Actualizar vista previa
+      updatePreview();
+    } catch (error) {
+      console.error("Error:", error);
+      showToast("Error al cargar configuración", "error");
+    }
+  }
+
+  // Actualizar vista previa
+  function updatePreview() {
+    const appName = document.getElementById("app_name").value;
+    const llmName = document.getElementById("llm_name").value;
+    const personality = document.getElementById("llm_personality").value;
+    const color = document.getElementById("primary_color").value;
+
+    document.getElementById("preview_app_name").textContent = appName;
+    document.getElementById("preview_llm_name").textContent = llmName;
+    document.getElementById("preview_color").style.backgroundColor = color;
+    document.getElementById("preview_personality").textContent =
+      personality.replace("{llm_name}", llmName);
+  }
+
+  // Sincronizar color picker con texto
+  document.getElementById("primary_color").addEventListener("input", (e) => {
+    document.getElementById("primary_color_text").value = e.target.value;
+    updatePreview();
+  });
+
+  // Actualizar vista previa al escribir
+  document.getElementById("app_name").addEventListener("input", updatePreview);
+  document.getElementById("llm_name").addEventListener("input", updatePreview);
+  document
+    .getElementById("llm_personality")
+    .addEventListener("input", updatePreview);
+
+  // Guardar configuración
+  async function saveConfig(event, section) {
+    event.preventDefault();
+
+    const updates = [];
+
+    if (section === "brand") {
+      updates.push(
+        { key: "app_name", value: document.getElementById("app_name").value },
+        {
+          key: "primary_color",
+          value: document.getElementById("primary_color").value,
+        }
+      );
+    } else if (section === "personality") {
+      updates.push(
+        { key: "llm_name", value: document.getElementById("llm_name").value },
+        {
+          key: "llm_personality",
+          value: document.getElementById("llm_personality").value,
+        }
+      );
+    }
+
+    try {
+      for (const update of updates) {
+        const response = await fetch("/api/admin/config", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(update),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al guardar ${update.key}`);
+        }
+      }
+
+      showToast("Configuración guardada exitosamente", "success");
+      await loadConfig();
+    } catch (error) {
+      console.error("Error:", error);
+      showToast("Error al guardar configuración", "error");
+    }
+  }
+
+  // Subir logo
+  async function uploadLogo(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/admin/config/logo", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Error al subir logo");
+      }
+
+      const data = await response.json();
+      showToast("Logo subido exitosamente", "success");
+
+      // Actualizar vista previa
+      document.getElementById("currentLogo").style.display = "block";
+      document.getElementById("logoPreview").src = data.logo_url;
+
+      await loadConfig();
+    } catch (error) {
+      console.error("Error:", error);
+      showToast(error.message, "error");
+    }
+  }
+
+  // Drag & drop para logo
+  const dropZone = document.getElementById("logoDropZone");
+
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("dragover");
+  });
+
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      document.getElementById("logoInput").files = files;
+      uploadLogo({ target: { files } });
+    }
+  });
+
+  // Cargar configuración al iniciar
+  document.addEventListener("DOMContentLoaded", () => {
+    loadConfig();
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}{{ app_name | default('SimpleIA') }}{% endblock %}
+    </title>
+    <link rel="stylesheet" href="/static/style.css" />
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="container">
+        <div class="navbar-content">
+          <a href="/" class="navbar-brand"
+            >{{ app_name | default('SimpleIA') }}</a
+          >
+          <button class="navbar-toggle" onclick="toggleMobileMenu()">☰</button>
+          <ul class="navbar-menu" id="navbarMenu">
+            <li><a href="/" class="navbar-link">Inicio</a></li>
+            {% if user %}
+            <li>
+              <span
+                class="navbar-link"
+                style="color: #ffd700; font-weight: bold"
+                >👤 {{ user.username }}</span
+              >
+            </li>
+            {% if user.is_admin %}
+            <li><a href="/admin" class="navbar-link">Panel Admin</a></li>
+            {% endif %}
+            <li>
+              <a href="#" class="navbar-link" onclick="logout()"
+                >Cerrar Sesión</a
+              >
+            </li>
+            {% else %}
+            <li><a href="/login" class="navbar-link">Iniciar Sesión</a></li>
+            <li><a href="/register" class="navbar-link">Registrarse</a></li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>{% block content %}{% endblock %}</main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-content">
+          <p>
+            &copy; 2025 {{ app_name | default('SimpleIA') }}. Todos los derechos
+            reservados.
+          </p>
+          <p>Powered by FastAPI & {{ llm_name | default('LLM') }}</p>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      function toggleMobileMenu() {
+        const menu = document.getElementById("navbarMenu");
+        menu.classList.toggle("active");
+      }
+
+      function logout() {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      }
+    </script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

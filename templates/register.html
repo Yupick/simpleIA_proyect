@@ -1,23 +1,58 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Registro - LLM Client</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    form { max-width: 400px; margin: auto; }
-    label, input, button { display: block; width: 100%; margin-bottom: 10px; }
-  </style>
-</head>
-<body>
-  <h1>Registro de Usuario</h1>
-  <form action="/register" method="post">
-    <label for="username">Nombre de usuario:</label>
-    <input type="text" id="username" name="username" required>
-    <label for="password">Contraseña:</label>
-    <input type="password" id="password" name="password" required>
-    <button type="submit">Registrarse</button>
-  </form>
-  <p>¿Ya tienes cuenta? <a href="/login">Inicia sesión</a></p>
-</body>
-</html>
+{% extends "base.html" %} {% block title %}Registrarse - {{ app_name |
+default('SimpleIA') }}{% endblock %} {% block content %}
+<div class="container" style="max-width: 500px; margin-top: 3rem">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title" style="text-align: center">📝 Crear Cuenta</h2>
+    </div>
+    <div class="card-body">
+      <form action="/register" method="post">
+        <div class="form-group">
+          <label for="username" class="form-label">Nombre de usuario</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="form-control"
+            required
+            autofocus
+          />
+          <small style="color: #657786">Mínimo 3 caracteres</small>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Contraseña</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control"
+            required
+          />
+          <small style="color: #657786">Mínimo 4 caracteres</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%">
+          Crear Cuenta
+        </button>
+      </form>
+
+      <div
+        style="
+          text-align: center;
+          margin-top: 1.5rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid #e1e8ed;
+        "
+      >
+        <p style="color: #657786">
+          ¿Ya tienes cuenta?
+          <a href="/login" style="color: #4a90e2; font-weight: bold"
+            >Inicia sesión aquí</a
+          >
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

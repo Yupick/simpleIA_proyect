@@ -1,0 +1,297 @@
+{% extends "admin_layout.html" %} {% block title %}Entrenamiento - Panel Admin{%
+endblock %} {% block content %}
+<div class="admin-header">
+  <h1 class="admin-header-title">🎓 Entrenamiento del Modelo</h1>
+  <div class="admin-header-actions">
+    <button class="btn btn-secondary" onclick="location.reload()">
+      🔄 Actualizar
+    </button>
+  </div>
+</div>
+
+<!-- Información -->
+<div class="alert alert-info">
+  ℹ️ <strong>Nota:</strong> El entrenamiento de modelos LLM es un proceso
+  complejo que requiere recursos computacionales significativos. Esta sección
+  permite configurar y ejecutar procesos de fine-tuning cuando el modelo lo
+  soporte.
+</div>
+
+<!-- Subir archivos de entrenamiento -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">📁 Archivos de Entrenamiento</h3>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="form-label">Archivo de Diálogos</label>
+          <div
+            class="file-upload-zone"
+            onclick="document.getElementById('dialogueFile').click()"
+          >
+            <div class="file-upload-icon">📄</div>
+            <p class="file-upload-text">
+              Click para seleccionar archivo de diálogos
+            </p>
+            <p class="file-upload-hint">Formato: .txt con conversaciones</p>
+          </div>
+          <input
+            type="file"
+            id="dialogueFile"
+            accept=".txt"
+            style="display: none"
+            onchange="uploadFile(event, 'dialogue')"
+          />
+          <div id="dialogueStatus" class="mt-sm"></div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="form-group">
+          <label class="form-label">Archivo de Conocimiento</label>
+          <div
+            class="file-upload-zone"
+            onclick="document.getElementById('knowledgeFile').click()"
+          >
+            <div class="file-upload-icon">📚</div>
+            <p class="file-upload-text">
+              Click para seleccionar archivo de conocimiento
+            </p>
+            <p class="file-upload-hint">Formato: .txt con información</p>
+          </div>
+          <input
+            type="file"
+            id="knowledgeFile"
+            accept=".txt"
+            style="display: none"
+            onchange="uploadFile(event, 'knowledge')"
+          />
+          <div id="knowledgeStatus" class="mt-sm"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Configuración de entrenamiento -->
+<div class="card mt-lg">
+  <div class="card-header">
+    <h3 class="card-title">⚙️ Configuración de Entrenamiento</h3>
+  </div>
+  <div class="card-body">
+    <form id="trainingForm">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">Épocas (Epochs)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="epochs"
+              value="3"
+              min="1"
+              max="100"
+            />
+            <small>Número de veces que se procesa el dataset completo</small>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">Batch Size</label>
+            <input
+              type="number"
+              class="form-control"
+              id="batchSize"
+              value="8"
+              min="1"
+              max="64"
+            />
+            <small>Tamaño del lote de datos por iteración</small>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-group">
+            <label class="form-label">Learning Rate</label>
+            <input
+              type="number"
+              class="form-control"
+              id="learningRate"
+              value="0.0001"
+              step="0.0001"
+              min="0.00001"
+              max="0.1"
+            />
+            <small>Tasa de aprendizaje del modelo</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-warning mt-md">
+        ⚠️ <strong>Advertencia:</strong> El entrenamiento puede tomar varios
+        minutos u horas dependiendo del tamaño del dataset y los recursos
+        disponibles.
+      </div>
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        onclick="startTraining()"
+        disabled
+        id="startTrainingBtn"
+      >
+        🚀 Iniciar Entrenamiento
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Progreso del entrenamiento -->
+<div class="card mt-lg" id="trainingProgress" style="display: none">
+  <div class="card-header">
+    <h3 class="card-title">⏳ Progreso del Entrenamiento</h3>
+  </div>
+  <div class="card-body">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+    <p
+      id="progressText"
+      class="mt-sm"
+      style="text-align: center; font-weight: bold"
+    >
+      0%
+    </p>
+
+    <div class="mt-md">
+      <h4>Logs:</h4>
+      <div
+        id="trainingLogs"
+        style="
+          background: #1a1a1a;
+          color: #00ff00;
+          padding: 1rem;
+          border-radius: 8px;
+          font-family: monospace;
+          max-height: 300px;
+          overflow-y: auto;
+        "
+      >
+        Esperando inicio...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Historial de entrenamientos -->
+<div class="card mt-lg">
+  <div class="card-header">
+    <h3 class="card-title">📊 Historial de Entrenamientos</h3>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-secondary">
+      No hay entrenamientos registrados aún. Esta función se completará cuando
+      el sistema de entrenamiento esté activo.
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div
+  id="toast"
+  class="alert"
+  style="
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: none;
+    z-index: 3000;
+    min-width: 300px;
+  "
+></div>
+
+{% endblock %} {% block extra_js %}
+<script>
+  function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = `alert alert-${type}`;
+    toast.style.display = "block";
+    setTimeout(() => (toast.style.display = "none"), 3000);
+  }
+
+  async function uploadFile(event, type) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusDiv = document.getElementById(type + "Status");
+    statusDiv.innerHTML = `<span class="badge badge-info">📤 Subiendo...</span>`;
+
+    // Simulación de subida (la API real necesitaría implementarse)
+    setTimeout(() => {
+      statusDiv.innerHTML = `<span class="badge badge-success">✓ ${file.name} cargado</span>`;
+      checkReadyToTrain();
+    }, 1000);
+  }
+
+  function checkReadyToTrain() {
+    const dialogueStatus =
+      document.getElementById("dialogueStatus").textContent;
+    const knowledgeStatus =
+      document.getElementById("knowledgeStatus").textContent;
+    const btn = document.getElementById("startTrainingBtn");
+
+    // Habilitar botón si hay al menos un archivo cargado
+    if (
+      dialogueStatus.includes("cargado") ||
+      knowledgeStatus.includes("cargado")
+    ) {
+      btn.disabled = false;
+    }
+  }
+
+  async function startTraining() {
+    const epochs = document.getElementById("epochs").value;
+    const batchSize = document.getElementById("batchSize").value;
+    const learningRate = document.getElementById("learningRate").value;
+
+    // Mostrar progreso
+    document.getElementById("trainingProgress").style.display = "block";
+    document.getElementById("startTrainingBtn").disabled = true;
+
+    const logs = document.getElementById("trainingLogs");
+    logs.innerHTML = `[INFO] Iniciando entrenamiento...\n`;
+    logs.innerHTML += `[INFO] Épocas: ${epochs}, Batch Size: ${batchSize}, Learning Rate: ${learningRate}\n`;
+
+    // Simulación de progreso (la API real necesitaría WebSockets o polling)
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 5;
+      document.getElementById("progressFill").style.width = progress + "%";
+      document.getElementById("progressText").textContent = progress + "%";
+
+      if (progress % 20 === 0) {
+        logs.innerHTML += `[INFO] Época ${Math.floor(
+          progress / 20
+        )}: loss=0.${Math.random().toString().substr(2, 4)}\n`;
+        logs.scrollTop = logs.scrollHeight;
+      }
+
+      if (progress >= 100) {
+        clearInterval(interval);
+        logs.innerHTML += `[SUCCESS] ✓ Entrenamiento completado!\n`;
+        showToast("Entrenamiento completado exitosamente", "success");
+        document.getElementById("startTrainingBtn").disabled = false;
+      }
+    }, 500);
+  }
+
+  // Nota informativa al cargar
+  document.addEventListener("DOMContentLoaded", () => {
+    showToast("Panel de entrenamiento - Funcionalidad en desarrollo", "info");
+  });
+</script>
+{% endblock %}

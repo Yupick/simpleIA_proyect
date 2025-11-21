@@ -5,7 +5,7 @@ Router para embeddings y búsqueda semántica.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Tuple
-from ..models.embeddings import get_embedding_store
+from ...models.embeddings import get_embedding_store
 
 router = APIRouter(prefix="/embed", tags=["embeddings"])
 

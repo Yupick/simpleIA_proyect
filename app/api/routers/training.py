@@ -4,7 +4,7 @@ Router para métricas de entrenamiento.
 
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Optional
-from ..db.training_metrics import (
+from ...db.training_metrics import (
     get_training_runs,
     get_epoch_metrics,
     get_latest_run_metrics
