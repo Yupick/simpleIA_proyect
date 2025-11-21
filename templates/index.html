@@ -4,6 +4,26 @@
   <div class="card">
     <div class="card-header">
       <h2 class="card-title">Chat con el Asistente</h2>
+      <div
+        style="
+          margin-top: 0.5rem;
+          padding: 0.5rem;
+          background: #f8f9fa;
+          border-radius: 4px;
+          font-size: 0.875rem;
+        "
+      >
+        <div style="display: flex; gap: 1rem; align-items: center">
+          <div>
+            <strong>Provider:</strong>
+            <span id="system-provider" style="color: #2563eb">Cargando...</span>
+          </div>
+          <div>
+            <strong>Modelo:</strong>
+            <span id="system-model" style="color: #059669">Cargando...</span>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="card-body">
       <!-- Contenedor del chat -->
@@ -50,6 +70,25 @@
 </main>
 {% endblock %} {% block extra_js %}
 <script>
+  // Cargar información del sistema al iniciar
+  async function loadSystemInfo() {
+    try {
+      const response = await fetch("/api/system-info");
+      const data = await response.json();
+      document.getElementById("system-provider").textContent =
+        data.provider || "Desconocido";
+      document.getElementById("system-model").textContent =
+        data.model || "Desconocido";
+    } catch (err) {
+      console.error("Error cargando info del sistema:", err);
+      document.getElementById("system-provider").textContent = "Error";
+      document.getElementById("system-model").textContent = "Error";
+    }
+  }
+
+  // Cargar info al inicio
+  loadSystemInfo();
+
   // Envío del mensaje del usuario y la respuesta del modelo
   document
     .getElementById("chat-form")

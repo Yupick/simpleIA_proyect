@@ -53,6 +53,21 @@ Este proyecto implementa un sistema LLM modular con FastAPI y Hugging Face Trans
 - ✅ **Endpoints /training**: runs, metrics, latest
 - ✅ **Auto-refresh** dashboard cada 30s
 
+### Sistema de Entrenamiento M3 (Completado) 🎓
+
+- ✅ **Sistema Híbrido CLI + Web**: Mantiene compatibilidad con `llm_trainer.py` CLI original
+- ✅ **Arquitectura Modular**: 3 componentes separados (`data_loader`, `job_manager`, `trainer`)
+- ✅ **Gestión de Archivos Web**: Upload, listado y eliminación desde panel admin
+- ✅ **Múltiples Fuentes**: Entrenar con todos los archivos, solo diálogos, solo conocimiento, o archivos específicos
+- ✅ **7 Formatos Soportados**: .txt, .pdf, .csv, .json, .xlsx, .xls, .docx
+- ✅ **11 Modelos Base**: gpt2, distilgpt2, gpt2-medium, gpt-neo, bloom, gpt2-spanish (2 variantes)
+- ✅ **Background Jobs**: Entrenamiento asíncrono con asyncio sin bloquear API
+- ✅ **Monitoreo en Tiempo Real**: Polling cada 2s con progreso, época actual, loss
+- ✅ **DataCollatorForLanguageModeling**: Entrenamiento optimizado con Transformers Trainer
+- ✅ **Custom Callbacks**: Reportes de progreso durante entrenamiento
+- ✅ **Cancelación de Jobs**: Detener entrenamiento en curso desde la UI
+- ✅ **Historial Completo**: Lista de trabajos recientes con estado y logs
+
 ### Infraestructura
 
 - ✅ **Docker completo**: Dockerfile multi-stage + docker-compose.yml
@@ -79,7 +94,7 @@ Estructura del proyecto (resumen)
   - `app/security/`: JWT y hashing con get_current_user
   - `app/db/`: SQLite helpers (`sqlite.py`, `training_metrics.py`)
   - `app/providers/`: ClaudeProvider, OpenAIProvider, HuggingFaceProvider
-  - `app/training/`: trainer unificado
+  - `app/training/`: módulo de entrenamiento (data_loader, job_manager, trainer)
   - `app/core/`: cache LRU, settings Pydantic V2, config, logging, metrics, rate_limit
 - `model_llm/`: checkpoints y modelos entrenados/locales
 - `templates/`: HTML para cliente web (index.html con streaming) y dashboard admin
@@ -206,6 +221,17 @@ Endpoints principales
 - `GET /training/runs/{id}/metrics`: métricas de un run
 - `GET /training/latest`: último run de entrenamiento
 
+### Training (M3)
+
+- `GET /training/files/{folder}`: listar archivos en dialogue o knowledge
+- `POST /training/upload/{folder}`: subir archivo (FormData)
+- `DELETE /training/files/{folder}/{filename}`: eliminar archivo
+- `GET /training/models/available`: modelos base disponibles
+- `POST /training/start`: iniciar entrenamiento background
+- `GET /training/jobs/{job_id}`: estado y progreso del job
+- `GET /training/jobs`: listar trabajos recientes
+- `POST /training/jobs/{job_id}/cancel`: cancelar entrenamiento
+
 ### Feedback
 
 - `POST /feedback`: almacenar feedback `{ "text" }` (límite 5000 chars, sanitización XSS)
@@ -233,9 +259,108 @@ curl -X POST http://localhost:8000/predict \
 curl -X POST http://localhost:8000/model \
 	-H 'Content-Type: application/json' \
 	-d '{"model_name":"gpt2"}'
+
+# Embeddings - Agregar documentos
+curl -X POST http://localhost:8000/embed/add \
+	-H 'Content-Type: application/json' \
+	-d '{"documents":["Python es genial","JavaScript también"]}'
+
+# Embeddings - Buscar similares
+curl -X POST http://localhost:8000/embed/search \
+	-H 'Content-Type: application/json' \
+	-d '{"query":"programación","k":2}'
+
+# Training - Iniciar entrenamiento
+curl -X POST http://localhost:8000/training/start \
+	-H 'Content-Type: application/json' \
+	-d '{
+		"model_name": "distilgpt2",
+		"epochs": 3,
+		"batch_size": 4,
+		"learning_rate": 0.00005,
+		"max_length": 128,
+		"source": "all"
+	}'
 ```
 
-Local vs. nube (providers)
+## Sistema de Entrenamiento 🎓
+
+El sistema permite entrenar modelos LLM custom desde CLI o panel web.
+
+### Uso desde Panel Web
+
+1. **Acceder**: http://localhost:8001/admin/training
+2. **Subir archivos**: Click en zonas de diálogos o conocimiento (.txt, .pdf, .csv, .json, .xlsx, .xls, .docx)
+3. **Configurar**:
+   - Modelo base (11 opciones: gpt2, distilgpt2, bloom, gpt2-spanish, etc.)
+   - Fuente: todos, solo diálogos, solo conocimiento
+   - Épocas (1-100), Batch Size (1-64), Learning Rate, Max Length
+4. **Entrenar**: Click "Iniciar Entrenamiento"
+5. **Monitorear**: Progreso actualiza cada 2s con época, step, loss
+6. **Cancelar**: Botón "Cancelar Entrenamiento" detiene el job
+7. **Historial**: Ver trabajos recientes con estado
+
+### Uso desde CLI
+
+```bash
+python app/llm_trainer.py
+# Menú interactivo: 1. Entrenar, 2. Cargar, 3. Re-entrenar, 4. Salir
+```
+
+### API de Entrenamiento
+
+```bash
+# Listar modelos
+curl http://localhost:8000/training/models/available
+
+# Subir archivo
+curl -X POST http://localhost:8000/training/upload/dialogue -F "file=@datos.txt"
+
+# Listar archivos
+curl http://localhost:8000/training/files/dialogue
+
+# Iniciar entrenamiento
+curl -X POST http://localhost:8000/training/start -H 'Content-Type: application/json' -d '{
+  "model_name": "distilgpt2",
+  "epochs": 3,
+  "batch_size": 4,
+  "learning_rate": 0.00005,
+  "max_length": 128,
+  "source": "all"
+}'
+
+# Monitorear job
+curl http://localhost:8000/training/jobs/{job_id}
+
+# Cancelar
+curl -X POST http://localhost:8000/training/jobs/{job_id}/cancel
+```
+
+### Modelos Entrenados
+
+Se guardan en `model_llm/` con timestamp:
+
+```
+model_llm/distilgpt2_20251121-103215/
+  ├── model.safetensors  (313 MB)
+  ├── config.json
+  ├── tokenizer.json
+  └── ...
+```
+
+Para usar:
+
+```json
+// config/config.json
+{
+  "provider": "hf",
+  "model_name": "model_llm/distilgpt2_20251121-103215"
+}
+```
+
+Luego: `./run_llm.sh admin reload` o reiniciar servidor.
+
+## Local vs. nube (providers)
 
 - **HuggingFace (hf)**: Modelos locales con `transformers.from_pretrained`. Si apuntas a carpeta en `model_llm/`, se carga desde disco.
 - **Claude (claude)**: Integración con Anthropic API via httpx. Requiere `ANTHROPIC_API_KEY` en `.env`.
@@ -438,16 +563,15 @@ venv/bin/python -m pytest tests/test_auth.py tests/test_predict.py tests/test_fe
 - **GPU no detectada**: instalar nvidia-docker, usar imagen CUDA
 - **Modelo no carga**: verificar DEFAULT_MODEL válido o en cache
 
-## Próximos Pasos (M3 - Futuro)
+## Próximos Pasos (Futuro)
 
-- [ ] **Tests M2 completos**: ajustar test_providers.py, test_cache.py, test_streaming.py, test_embeddings.py
-- [ ] **RAG Pipeline**: integración embeddings + retrieval + generation
-- [ ] **Fine-tuning UI**: dashboard para entrenar modelos custom
-- [ ] **Multi-model inference**: servir múltiples modelos simultáneamente
-- [ ] **Async streaming**: mejorar performance con async generators
-- [ ] **Prometheus metrics**: exportar métricas detalladas
-- [ ] **WebSocket support**: alternativa a SSE para streaming
+- [ ] **Tests M3**: Test coverage para training module
+- [ ] **Persistencia Jobs**: SQLite para jobs de entrenamiento
+- [ ] **WebSocket Streaming**: Reemplazar polling por WebSocket para progreso en tiempo real
+- [ ] **RAG Pipeline**: Integración embeddings + retrieval + generation
+- [ ] **Multi-model inference**: Servir múltiples modelos simultáneamente
 - [ ] **Model quantization**: GGUF, AWQ para modelos más ligeros
+- [ ] **Prometheus metrics**: Exportar métricas detalladas
 - [ ] **Kubernetes deployment**: Helm charts y manifests
 - [ ] **CI/CD pipeline**: GitHub Actions para tests y deployment
 
@@ -464,6 +588,16 @@ No especificada. Añade un archivo `LICENSE` si corresponde.
 5. Abrir Pull Request
 
 ## Changelog
+
+### M3 (Noviembre 2025)
+
+- ✅ **Sistema de Entrenamiento Completo**:
+  - Arquitectura modular (data_loader, job_manager, trainer)
+  - Panel web con upload, config, monitoreo tiempo real
+  - Background jobs con asyncio
+  - 11 modelos base, 7 formatos de archivo
+  - Custom Transformers callbacks
+  - Historial y cancelación de jobs
 
 ### M2 (Noviembre 2025)
 

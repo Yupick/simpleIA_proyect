@@ -35,12 +35,14 @@ endblock %} {% block content %}
             <p class="file-upload-text">
               Click para seleccionar archivo de diálogos
             </p>
-            <p class="file-upload-hint">Formato: .txt con conversaciones</p>
+            <p class="file-upload-hint">
+              Formatos: .txt, .pdf, .csv, .json, .xlsx, .xls, .docx
+            </p>
           </div>
           <input
             type="file"
             id="dialogueFile"
-            accept=".txt"
+            accept=".txt,.pdf,.csv,.json,.xlsx,.xls,.docx"
             style="display: none"
             onchange="uploadFile(event, 'dialogue')"
           />
@@ -59,12 +61,14 @@ endblock %} {% block content %}
             <p class="file-upload-text">
               Click para seleccionar archivo de conocimiento
             </p>
-            <p class="file-upload-hint">Formato: .txt con información</p>
+            <p class="file-upload-hint">
+              Formatos: .txt, .pdf, .csv, .json, .xlsx, .xls, .docx
+            </p>
           </div>
           <input
             type="file"
             id="knowledgeFile"
-            accept=".txt"
+            accept=".txt,.pdf,.csv,.json,.xlsx,.xls,.docx"
             style="display: none"
             onchange="uploadFile(event, 'knowledge')"
           />
@@ -83,7 +87,33 @@ endblock %} {% block content %}
   <div class="card-body">
     <form id="trainingForm">
       <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">Modelo Base</label>
+            <select class="form-control" id="modelName">
+              <option value="">Cargando modelos...</option>
+            </select>
+            <small>Modelo base de HuggingFace para fine-tuning</small>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="form-label">Fuente de Datos</label>
+            <select class="form-control" id="dataSource">
+              <option value="all">
+                Todos los archivos (Diálogos + Conocimiento)
+              </option>
+              <option value="dialogue">Solo Diálogos</option>
+              <option value="knowledge">Solo Conocimiento</option>
+            </select>
+            <small>Seleccionar qué archivos usar para entrenamiento</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-3">
           <div class="form-group">
             <label class="form-label">Épocas (Epochs)</label>
             <input
@@ -98,14 +128,14 @@ endblock %} {% block content %}
           </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="form-group">
             <label class="form-label">Batch Size</label>
             <input
               type="number"
               class="form-control"
               id="batchSize"
-              value="8"
+              value="4"
               min="1"
               max="64"
             />
@@ -113,19 +143,34 @@ endblock %} {% block content %}
           </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="form-group">
             <label class="form-label">Learning Rate</label>
             <input
               type="number"
               class="form-control"
               id="learningRate"
-              value="0.0001"
-              step="0.0001"
+              value="0.00005"
+              step="0.00001"
               min="0.00001"
               max="0.1"
             />
             <small>Tasa de aprendizaje del modelo</small>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="form-group">
+            <label class="form-label">Max Length</label>
+            <input
+              type="number"
+              class="form-control"
+              id="maxLength"
+              value="128"
+              min="32"
+              max="1024"
+            />
+            <small>Longitud máxima de tokens</small>
           </div>
         </div>
       </div>
@@ -136,16 +181,57 @@ endblock %} {% block content %}
         disponibles.
       </div>
 
-      <button
-        type="button"
-        class="btn btn-primary"
-        onclick="startTraining()"
-        disabled
-        id="startTrainingBtn"
-      >
-        🚀 Iniciar Entrenamiento
-      </button>
+      <div class="row">
+        <div class="col-md-6">
+          <button
+            type="button"
+            class="btn btn-primary"
+            onclick="startTraining()"
+            id="startTrainingBtn"
+            style="width: 100%"
+          >
+            🚀 Iniciar Entrenamiento
+          </button>
+        </div>
+        <div class="col-md-6">
+          <button
+            type="button"
+            class="btn btn-danger"
+            onclick="cancelTraining()"
+            id="cancelTrainingBtn"
+            style="width: 100%; display: none"
+          >
+            ⛔ Cancelar Entrenamiento
+          </button>
+        </div>
+      </div>
     </form>
+  </div>
+</div>
+
+<!-- Archivos Cargados -->
+<div class="card mt-lg">
+  <div class="card-header">
+    <h3 class="card-title">📂 Archivos Cargados</h3>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <h4>Diálogos</h4>
+        <div id="dialogueFilesList" style="max-height: 200px; overflow-y: auto">
+          <p class="text-muted">Cargando...</p>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <h4>Conocimiento</h4>
+        <div
+          id="knowledgeFilesList"
+          style="max-height: 200px; overflow-y: auto"
+        >
+          <p class="text-muted">Cargando...</p>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -189,12 +275,11 @@ endblock %} {% block content %}
 <!-- Historial de entrenamientos -->
 <div class="card mt-lg">
   <div class="card-header">
-    <h3 class="card-title">📊 Historial de Entrenamientos</h3>
+    <h3 class="card-title">📊 Trabajos de Entrenamiento Recientes</h3>
   </div>
   <div class="card-body">
-    <div class="alert alert-secondary">
-      No hay entrenamientos registrados aún. Esta función se completará cuando
-      el sistema de entrenamiento esté activo.
+    <div id="trainingJobs">
+      <p class="text-muted">Cargando trabajos...</p>
     </div>
   </div>
 </div>
@@ -215,6 +300,9 @@ endblock %} {% block content %}
 
 {% endblock %} {% block extra_js %}
 <script>
+  let currentJobId = null;
+  let pollingInterval = null;
+
   function showToast(message, type = "success") {
     const toast = document.getElementById("toast");
     toast.textContent = message;
@@ -225,73 +313,362 @@ endblock %} {% block content %}
 
   async function uploadFile(event, type) {
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file) {
+      console.log("No file selected");
+      return;
+    }
 
+    console.log(`Uploading file: ${file.name} (${file.size} bytes) to ${type}`);
     const statusDiv = document.getElementById(type + "Status");
-    statusDiv.innerHTML = `<span class="badge badge-info">📤 Subiendo...</span>`;
+    statusDiv.innerHTML = `<span class="badge badge-info">📤 Subiendo ${file.name}...</span>`;
 
-    // Simulación de subida (la API real necesitaría implementarse)
-    setTimeout(() => {
-      statusDiv.innerHTML = `<span class="badge badge-success">✓ ${file.name} cargado</span>`;
-      checkReadyToTrain();
-    }, 1000);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      console.log(`Posting to /training/upload/${type}`);
+      const response = await fetch(`/training/upload/${type}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      console.log(`Response status: ${response.status}`);
+      const result = await response.json();
+      console.log("Response data:", result);
+
+      if (response.ok) {
+        statusDiv.innerHTML = `<span class="badge badge-success">✓ ${file.name} cargado</span>`;
+        showToast(`Archivo ${file.name} subido exitosamente`, "success");
+        console.log(`Reloading file list for ${type}`);
+        await loadFiles(type);
+      } else {
+        throw new Error(
+          result.detail || result.error || "Error al subir archivo"
+        );
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      statusDiv.innerHTML = `<span class="badge badge-danger">✗ Error al subir</span>`;
+      showToast(error.message, "danger");
+    }
   }
 
-  function checkReadyToTrain() {
-    const dialogueStatus =
-      document.getElementById("dialogueStatus").textContent;
-    const knowledgeStatus =
-      document.getElementById("knowledgeStatus").textContent;
-    const btn = document.getElementById("startTrainingBtn");
+  async function loadFiles(folder) {
+    try {
+      console.log(`Loading files from ${folder}...`);
+      const response = await fetch(`/training/files/${folder}`);
 
-    // Habilitar botón si hay al menos un archivo cargado
-    if (
-      dialogueStatus.includes("cargado") ||
-      knowledgeStatus.includes("cargado")
-    ) {
-      btn.disabled = false;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log(`Files received for ${folder}:`, data);
+
+      const listDiv = document.getElementById(`${folder}FilesList`);
+
+      if (!listDiv) {
+        console.error(`Element ${folder}FilesList not found`);
+        return;
+      }
+
+      if (data.files && data.files.length > 0) {
+        listDiv.innerHTML = data.files
+          .map(
+            (file) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid #333;">
+            <div>
+              <strong>${file.name}</strong>
+              <br>
+              <small>${(file.size / 1024).toFixed(2)} KB - ${new Date(
+              file.modified * 1000
+            ).toLocaleString()}</small>
+            </div>
+            <button class="btn btn-sm btn-danger" onclick="deleteFile('${folder}', '${
+              file.name
+            }')">
+              🗑️ Eliminar
+            </button>
+          </div>
+        `
+          )
+          .join("");
+        console.log(`Displayed ${data.files.length} files for ${folder}`);
+      } else if (Array.isArray(data) && data.length > 0) {
+        // Si data es un array directamente
+        listDiv.innerHTML = data
+          .map(
+            (file) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid #333;">
+            <div>
+              <strong>${file.name}</strong>
+              <br>
+              <small>${(file.size / 1024).toFixed(2)} KB - ${new Date(
+              file.modified * 1000
+            ).toLocaleString()}</small>
+            </div>
+            <button class="btn btn-sm btn-danger" onclick="deleteFile('${folder}', '${
+              file.name
+            }')">
+              🗑️ Eliminar
+            </button>
+          </div>
+        `
+          )
+          .join("");
+        console.log(`Displayed ${data.length} files for ${folder}`);
+      } else {
+        listDiv.innerHTML =
+          '<p class="text-muted">No hay archivos cargados</p>';
+        console.log(`No files found for ${folder}`);
+      }
+    } catch (error) {
+      console.error(`Error loading files for ${folder}:`, error);
+      const listDiv = document.getElementById(`${folder}FilesList`);
+      if (listDiv) {
+        listDiv.innerHTML = `<p class="text-danger">Error al cargar archivos: ${error.message}</p>`;
+      }
+    }
+  }
+
+  async function deleteFile(folder, filename) {
+    if (!confirm(`¿Eliminar el archivo ${filename}?`)) return;
+
+    try {
+      const response = await fetch(`/training/files/${folder}/${filename}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showToast(`Archivo ${filename} eliminado`, "success");
+        await loadFiles(folder);
+      } else {
+        throw new Error(result.detail || "Error al eliminar archivo");
+      }
+    } catch (error) {
+      showToast(error.message, "danger");
+    }
+  }
+
+  async function loadAvailableModels() {
+    try {
+      console.log("Cargando modelos disponibles...");
+      const response = await fetch("/training/models/available");
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Modelos recibidos:", data);
+
+      const modelSelect = document.getElementById("modelName");
+
+      if (!modelSelect) {
+        console.error("Elemento modelName no encontrado");
+        return;
+      }
+
+      if (data.models && data.models.length > 0) {
+        modelSelect.innerHTML = data.models
+          .map((model) => `<option value="${model}">${model}</option>`)
+          .join("");
+        console.log(`${data.models.length} modelos cargados en el selector`);
+      } else {
+        modelSelect.innerHTML =
+          '<option value="">No hay modelos disponibles</option>';
+      }
+    } catch (error) {
+      console.error("Error cargando modelos:", error);
+      const modelSelect = document.getElementById("modelName");
+      if (modelSelect) {
+        modelSelect.innerHTML =
+          '<option value="">Error al cargar modelos</option>';
+      }
     }
   }
 
   async function startTraining() {
-    const epochs = document.getElementById("epochs").value;
-    const batchSize = document.getElementById("batchSize").value;
-    const learningRate = document.getElementById("learningRate").value;
+    const modelName = document.getElementById("modelName").value;
+    const epochs = parseInt(document.getElementById("epochs").value);
+    const batchSize = parseInt(document.getElementById("batchSize").value);
+    const learningRate = parseFloat(
+      document.getElementById("learningRate").value
+    );
+    const maxLength = parseInt(document.getElementById("maxLength").value);
+    const source = document.getElementById("dataSource").value;
 
-    // Mostrar progreso
-    document.getElementById("trainingProgress").style.display = "block";
-    document.getElementById("startTrainingBtn").disabled = true;
+    if (!modelName) {
+      showToast("Por favor selecciona un modelo", "warning");
+      return;
+    }
 
-    const logs = document.getElementById("trainingLogs");
-    logs.innerHTML = `[INFO] Iniciando entrenamiento...\n`;
-    logs.innerHTML += `[INFO] Épocas: ${epochs}, Batch Size: ${batchSize}, Learning Rate: ${learningRate}\n`;
+    try {
+      const response = await fetch("/training/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model_name: modelName,
+          epochs,
+          batch_size: batchSize,
+          learning_rate: learningRate,
+          max_length: maxLength,
+          source,
+        }),
+      });
 
-    // Simulación de progreso (la API real necesitaría WebSockets o polling)
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 5;
-      document.getElementById("progressFill").style.width = progress + "%";
-      document.getElementById("progressText").textContent = progress + "%";
+      const result = await response.json();
 
-      if (progress % 20 === 0) {
-        logs.innerHTML += `[INFO] Época ${Math.floor(
-          progress / 20
-        )}: loss=0.${Math.random().toString().substr(2, 4)}\n`;
-        logs.scrollTop = logs.scrollHeight;
+      if (response.ok) {
+        currentJobId = result.job_id;
+        showToast("Entrenamiento iniciado", "success");
+
+        // Mostrar progreso y deshabilitar botón
+        document.getElementById("trainingProgress").style.display = "block";
+        document.getElementById("startTrainingBtn").style.display = "none";
+        document.getElementById("cancelTrainingBtn").style.display = "block";
+
+        // Iniciar polling
+        startPolling();
+      } else {
+        throw new Error(result.detail || "Error al iniciar entrenamiento");
       }
-
-      if (progress >= 100) {
-        clearInterval(interval);
-        logs.innerHTML += `[SUCCESS] ✓ Entrenamiento completado!\n`;
-        showToast("Entrenamiento completado exitosamente", "success");
-        document.getElementById("startTrainingBtn").disabled = false;
-      }
-    }, 500);
+    } catch (error) {
+      showToast(error.message, "danger");
+    }
   }
 
-  // Nota informativa al cargar
-  document.addEventListener("DOMContentLoaded", () => {
-    showToast("Panel de entrenamiento - Funcionalidad en desarrollo", "info");
+  function startPolling() {
+    if (pollingInterval) clearInterval(pollingInterval);
+
+    pollingInterval = setInterval(async () => {
+      if (!currentJobId) return;
+
+      try {
+        const response = await fetch(`/training/jobs/${currentJobId}`);
+        const job = await response.json();
+
+        // Actualizar barra de progreso
+        const progressFill = document.getElementById("progressFill");
+        const progressText = document.getElementById("progressText");
+        progressFill.style.width = job.progress + "%";
+        progressText.textContent = job.progress + "%";
+
+        // Actualizar logs
+        const logsDiv = document.getElementById("trainingLogs");
+        logsDiv.innerHTML = job.logs.join("\n");
+        logsDiv.scrollTop = logsDiv.scrollHeight;
+
+        // Si terminó, detener polling
+        if (
+          job.status === "completed" ||
+          job.status === "failed" ||
+          job.status === "cancelled"
+        ) {
+          clearInterval(pollingInterval);
+          pollingInterval = null;
+          currentJobId = null;
+
+          document.getElementById("startTrainingBtn").style.display = "block";
+          document.getElementById("cancelTrainingBtn").style.display = "none";
+
+          if (job.status === "completed") {
+            showToast("✓ Entrenamiento completado exitosamente", "success");
+          } else if (job.status === "failed") {
+            showToast("✗ Entrenamiento fallido", "danger");
+          } else if (job.status === "cancelled") {
+            showToast("Entrenamiento cancelado", "warning");
+          }
+
+          await loadTrainingJobs();
+        }
+      } catch (error) {
+        console.error("Error en polling:", error);
+      }
+    }, 2000); // Poll cada 2 segundos
+  }
+
+  async function cancelTraining() {
+    if (!currentJobId) return;
+
+    if (!confirm("¿Cancelar el entrenamiento en curso?")) return;
+
+    try {
+      const response = await fetch(`/training/jobs/${currentJobId}/cancel`, {
+        method: "POST",
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        showToast("Entrenamiento cancelado", "warning");
+      } else {
+        throw new Error(result.detail || "Error al cancelar");
+      }
+    } catch (error) {
+      showToast(error.message, "danger");
+    }
+  }
+
+  async function loadTrainingJobs() {
+    try {
+      const response = await fetch("/training/jobs");
+      const data = await response.json();
+
+      const jobsDiv = document.getElementById("trainingJobs");
+
+      if (data.jobs && data.jobs.length > 0) {
+        jobsDiv.innerHTML = data.jobs
+          .map((job) => {
+            const statusBadge =
+              {
+                pending: "badge-secondary",
+                running: "badge-info",
+                completed: "badge-success",
+                failed: "badge-danger",
+                cancelled: "badge-warning",
+              }[job.status] || "badge-secondary";
+
+            return `
+            <div style="padding: 1rem; border: 1px solid #333; border-radius: 8px; margin-bottom: 1rem;">
+              <div style="display: flex; justify-content: space-between;">
+                <div>
+                  <strong>${job.model_name}</strong>
+                  <span class="badge ${statusBadge}">${job.status}</span>
+                </div>
+                <div>
+                  <small>${new Date(job.created_at).toLocaleString()}</small>
+                </div>
+              </div>
+              <div style="margin-top: 0.5rem;">
+                <small>Job ID: ${job.job_id}</small><br>
+                <small>Progreso: ${job.progress}%</small>
+              </div>
+            </div>
+          `;
+          })
+          .join("");
+      } else {
+        jobsDiv.innerHTML =
+          '<p class="text-muted">No hay trabajos de entrenamiento</p>';
+      }
+    } catch (error) {
+      console.error("Error cargando trabajos:", error);
+      document.getElementById("trainingJobs").innerHTML =
+        '<p class="text-danger">Error al cargar trabajos</p>';
+    }
+  }
+
+  // Inicialización
+  document.addEventListener("DOMContentLoaded", async () => {
+    await loadAvailableModels();
+    await loadFiles("dialogue");
+    await loadFiles("knowledge");
+    await loadTrainingJobs();
+
+    showToast("Panel de entrenamiento activo", "info");
   });
 </script>
 {% endblock %}

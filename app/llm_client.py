@@ -54,6 +54,47 @@ def decode_token_from_cookie(request: Request):
         pass
     return None
 
+@app.get("/api/system-info")
+async def get_system_info():
+    """Obtiene información del sistema actual (provider, modelo)."""
+    try:
+        import json
+        from pathlib import Path
+        
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        config_path = BASE_DIR / "config" / "config.json"
+        
+        provider = "huggingface"
+        model = "gpt2"
+        
+        if config_path.exists():
+            try:
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+                    provider_raw = config.get("provider", "hf")
+                    
+                    # Mapear a nombres legibles
+                    provider_map = {
+                        "hf": "HuggingFace",
+                        "huggingface": "HuggingFace",
+                        "claude": "Claude (Anthropic)",
+                        "openai": "OpenAI"
+                    }
+                    provider = provider_map.get(provider_raw, provider_raw)
+                    model = config.get("model_name", config.get("selected_model", model))
+            except Exception as e:
+                print(f"Error leyendo config: {e}")
+        
+        return JSONResponse(content={
+            "provider": provider,
+            "model": model
+        })
+    except Exception as e:
+        return JSONResponse(content={
+            "provider": "Error",
+            "model": str(e)
+        }, status_code=500)
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     user = decode_token_from_cookie(request)
@@ -473,3 +514,66 @@ async def admin_providers_switch_proxy(request: Request):
     except Exception as e:
         print(f"Error inesperado en providers/switch proxy: {str(e)}")
         return JSONResponse(content={"error": str(e), "detail": str(e)}, status_code=500)
+
+
+# ===== PROXIES TRAINING API =====
+
+@app.api_route("/training/{path:path}", methods=["GET", "POST", "DELETE"])
+async def training_proxy(request: Request, path: str):
+    """Proxy para todos los endpoints de training."""
+    try:
+        # Verificar autenticación
+        user = decode_token_from_cookie(request)
+        if not user:
+            return JSONResponse(content={"error": "Unauthorized"}, status_code=401)
+        
+        token = request.cookies.get("access_token")
+        headers = {"Authorization": f"Bearer {token}"}
+        url = f"{API_URL}/training/{path}"
+        
+        # Manejar diferentes métodos HTTP
+        if request.method == "GET":
+            response = requests.get(url, headers=headers, params=request.query_params)
+        elif request.method == "POST":
+            # Verificar si es FormData (multipart) o JSON
+            content_type = request.headers.get("content-type", "")
+            if "multipart/form-data" in content_type:
+                # Para uploads de archivos
+                form = await request.form()
+                files = {}
+                data = {}
+                for key, value in form.items():
+                    if hasattr(value, 'read'):  # Es un archivo
+                        files[key] = (value.filename, await value.read(), value.content_type)
+                    else:
+                        data[key] = value
+                response = requests.post(url, headers={"Authorization": f"Bearer {token}"}, files=files, data=data)
+            else:
+                # JSON
+                body = await request.json() if await request.body() else {}
+                headers["Content-Type"] = "application/json"
+                response = requests.post(url, json=body, headers=headers)
+        elif request.method == "DELETE":
+            response = requests.delete(url, headers=headers)
+        else:
+            return JSONResponse(content={"error": "Method not allowed"}, status_code=405)
+        
+        response.raise_for_status()
+        return JSONResponse(content=response.json(), status_code=response.status_code)
+        
+    except requests.exceptions.RequestException as e:
+        error_msg = str(e)
+        status_code = 500
+        if hasattr(e, 'response') and e.response is not None:
+            status_code = e.response.status_code
+            try:
+                error_detail = e.response.json()
+                error_msg = error_detail.get('detail', str(e))
+            except:
+                error_msg = e.response.text or str(e)
+        print(f"Error en training proxy: {error_msg}")
+        return JSONResponse(content={"error": error_msg, "detail": error_msg}, status_code=status_code)
+    except Exception as e:
+        print(f"Error inesperado en training proxy: {str(e)}")
+        return JSONResponse(content={"error": str(e), "detail": str(e)}, status_code=500)
+

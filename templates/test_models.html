@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Modelos</title>
+</head>
+<body>
+    <h1>Test de Carga de Modelos</h1>
+    <select id="modelName">
+        <option value="">Cargando...</option>
+    </select>
+    <div id="debug"></div>
+    
+    <script>
+        async function testModels() {
+            const debugDiv = document.getElementById('debug');
+            try {
+                debugDiv.innerHTML += '<p>Fetching /training/models/available...</p>';
+                const response = await fetch('/training/models/available');
+                debugDiv.innerHTML += `<p>Status: ${response.status}</p>`;
+                
+                const data = await response.json();
+                debugDiv.innerHTML += `<p>Data: ${JSON.stringify(data, null, 2)}</p>`;
+                
+                const select = document.getElementById('modelName');
+                if (data.models) {
+                    select.innerHTML = data.models.map(m => `<option value="${m}">${m}</option>`).join('');
+                    debugDiv.innerHTML += `<p>SUCCESS: Loaded ${data.models.length} models</p>`;
+                }
+            } catch (error) {
+                debugDiv.innerHTML += `<p style="color:red">ERROR: ${error.message}</p>`;
+                console.error(error);
+            }
+        }
+        
+        window.addEventListener('load', testModels);
+    </script>
+</body>
+</html>

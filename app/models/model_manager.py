@@ -35,6 +35,21 @@ def load_model(force: bool = False):
         model_name = config.selected_model
         provider = config.provider
         device = get_device()
+        
+        # Leer API keys y configuraciones adicionales desde config.json
+        import json
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent.parent
+        config_path = BASE_DIR / "config" / "config.json"
+        
+        api_keys_config = {}
+        if config_path.exists():
+            try:
+                with open(config_path, 'r') as f:
+                    api_keys_config = json.load(f)
+            except Exception as e:
+                logger.warning(f"Error leyendo config.json: {e}")
+        
         try:
             if provider == "hf":
                 logger.info(f"[HF] Loading model: {model_name} on {device}")
@@ -42,13 +57,31 @@ def load_model(force: bool = False):
                 _model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
                 _provider_instance = None
             elif provider == "claude":
-                logger.info(f"[Claude] Initializing Claude provider")
-                _provider_instance = ClaudeProvider(model_name or "claude-3-5-sonnet-20241022")
+                api_key = api_keys_config.get("anthropic_api_key") or os.getenv("ANTHROPIC_API_KEY")
+                if not api_key:
+                    logger.error("[Claude] API key no encontrada en config.json ni en variables de entorno")
+                    raise ValueError("Claude API key is required")
+                
+                logger.info(f"[Claude] Initializing Claude provider with model {model_name}")
+                _provider_instance = ClaudeProvider(
+                    api_key=api_key,
+                    model_name=model_name or "claude-3-5-sonnet-20241022"
+                )
                 _model = None
                 _tokenizer = None
             elif provider == "openai":
-                logger.info(f"[OpenAI] Initializing OpenAI provider")
-                _provider_instance = OpenAIProvider(model_name or "gpt-3.5-turbo")
+                api_key = api_keys_config.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
+                if not api_key:
+                    logger.error("[OpenAI] API key no encontrada en config.json ni en variables de entorno")
+                    raise ValueError("OpenAI API key is required")
+                
+                base_url = api_keys_config.get("openai_base_url", "https://api.openai.com/v1/chat/completions")
+                logger.info(f"[OpenAI] Initializing OpenAI provider with model {model_name}")
+                _provider_instance = OpenAIProvider(
+                    api_key=api_key,
+                    model_name=model_name or "gpt-3.5-turbo",
+                    base_url=base_url
+                )
                 _model = None
                 _tokenizer = None
             else:

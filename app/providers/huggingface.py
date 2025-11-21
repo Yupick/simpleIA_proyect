@@ -8,13 +8,14 @@ class HuggingFaceProvider:
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
-    def generate(self, prompt: str, max_length: int = 50, temperature: float = 0.7):
+    def generate(self, prompt: str, max_length: int = 50, num_return_sequences: int = 1, temperature: float = 0.7):
         enc = self.tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
         with torch.no_grad():
             out = self.model.generate(
                 enc["input_ids"],
                 attention_mask=enc["attention_mask"],
                 max_length=max_length,
+                num_return_sequences=num_return_sequences,
                 do_sample=True,
                 temperature=temperature,
                 pad_token_id=self.tokenizer.pad_token_id

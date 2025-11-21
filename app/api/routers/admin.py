@@ -329,7 +329,7 @@ async def delete_feedback(
 @router.get("/providers/current")
 async def get_current_provider(current_user=Depends(get_current_admin_user)):
     """
-    Obtiene el provider actual configurado.
+    Obtiene el provider actual configurado y todas las API keys guardadas.
     Requiere permisos de administrador.
     """
     from ...core.settings import settings
@@ -341,6 +341,7 @@ async def get_current_provider(current_user=Depends(get_current_admin_user)):
     
     provider = "huggingface"  # Default
     model = settings.DEFAULT_MODEL
+    saved_keys = {}
     
     if config_path.exists():
         try:
@@ -348,23 +349,41 @@ async def get_current_provider(current_user=Depends(get_current_admin_user)):
                 config = json.load(f)
                 provider = config.get("provider", provider)
                 model = config.get("model_name", config.get("selected_model", model))
+                
+                # Extraer todas las API keys y configuraciones guardadas
+                saved_keys = {
+                    "openai_api_key": config.get("openai_api_key", ""),
+                    "anthropic_api_key": config.get("anthropic_api_key", ""),
+                    "api_version": config.get("anthropic_api_version", ""),
+                    "max_tokens": config.get("max_tokens", 4096),
+                    "organization_id": config.get("openai_organization_id", ""),
+                    "base_url": config.get("openai_base_url", "")
+                }
         except Exception as e:
             print(f"Error leyendo config.json: {e}")
     
-    # Mapear provider corto a nombre completo
+    # Normalizar provider a formato interno
     provider_mapping = {
-        "hf": "huggingface",
-        "huggingface": "huggingface",
+        "huggingface": "hf",
+        "hf": "hf",
         "claude": "claude",
         "openai": "openai"
     }
     
     provider = provider_mapping.get(provider, provider)
     
+    # Mapear para display
+    display_mapping = {
+        "hf": "huggingface",
+        "claude": "claude",
+        "openai": "openai"
+    }
+    
     return {
-        "provider": provider,
+        "provider": display_mapping.get(provider, provider),
         "model": model,
-        "available_providers": ["huggingface", "claude", "openai"]
+        "available_providers": ["huggingface", "claude", "openai"],
+        "saved_keys": saved_keys
     }
 
 
@@ -391,17 +410,33 @@ async def switch_provider(
             detail=f"Provider no válido. Permitidos: {', '.join(allowed_providers)}"
         )
     
-    # Validar API keys según provider
-    if data.provider == "claude" and not data.api_key:
-        raise HTTPException(
-            status_code=400,
-            detail="La API key de Anthropic es requerida para usar Claude"
-        )
-    if data.provider == "openai" and not data.api_key:
-        raise HTTPException(
-            status_code=400,
-            detail="La API key de OpenAI es requerida"
-        )
+    # Leer config actual para verificar si hay keys guardadas
+    BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+    config_path = BASE_DIR / "config" / "config.json"
+    existing_config = {}
+    
+    if config_path.exists():
+        try:
+            with open(config_path, 'r') as f:
+                existing_config = json.load(f)
+        except Exception:
+            pass
+    
+    # Validar API keys: requeridas si no hay una guardada previamente
+    if data.provider == "claude":
+        has_saved_key = existing_config.get("anthropic_api_key")
+        if not data.api_key and not has_saved_key:
+            raise HTTPException(
+                status_code=400,
+                detail="La API key de Anthropic es requerida para usar Claude"
+            )
+    if data.provider == "openai":
+        has_saved_key = existing_config.get("openai_api_key")
+        if not data.api_key and not has_saved_key:
+            raise HTTPException(
+                status_code=400,
+                detail="La API key de OpenAI es requerida"
+            )
     
     # Actualizar config.json
     BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
@@ -413,18 +448,27 @@ async def switch_provider(
     else:
         config = {}
     
-    config["provider"] = data.provider
+    # Normalizar provider a formato interno
+    provider_internal = {
+        "huggingface": "hf",
+        "claude": "claude",
+        "openai": "openai"
+    }
+    
+    config["provider"] = provider_internal.get(data.provider, data.provider)
     config["model_name"] = data.model
     
-    # Agregar configuraciones adicionales según provider
+    # Actualizar configuraciones según provider (CONSERVAR las keys existentes)
     if data.provider == "claude":
-        config["anthropic_api_key"] = data.api_key
+        if data.api_key:  # Solo actualizar si se proporciona
+            config["anthropic_api_key"] = data.api_key
         if data.api_version:
             config["anthropic_api_version"] = data.api_version
         if data.max_tokens:
             config["max_tokens"] = data.max_tokens
     elif data.provider == "openai":
-        config["openai_api_key"] = data.api_key
+        if data.api_key:  # Solo actualizar si se proporciona
+            config["openai_api_key"] = data.api_key
         if data.organization_id:
             config["openai_organization_id"] = data.organization_id
         if data.base_url:

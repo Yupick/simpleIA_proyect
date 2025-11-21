@@ -280,6 +280,9 @@ endblock %} {% block content %}
         data.provider || "No configurado";
       document.getElementById("currentModel").textContent =
         data.model || "No configurado";
+
+      // Guardar las keys para pre-llenar campos
+      window.savedKeys = data.saved_keys || {};
     } catch (error) {
       console.error("Error completo:", error);
       document.getElementById("currentProvider").textContent = "Error";
@@ -321,16 +324,42 @@ endblock %} {% block content %}
       claudeFields.style.display = "block";
       apiKeyLabel.textContent = "Anthropic API Key";
       apiKeyLink.href = "https://console.anthropic.com/account/keys";
-      apiKeyInput.setAttribute("required", "required");
       apiKeyInput.placeholder = "sk-ant-...";
+
+      // Pre-llenar con valores guardados
+      if (window.savedKeys) {
+        apiKeyInput.value = window.savedKeys.anthropic_api_key || "";
+        document.getElementById("apiVersion").value =
+          window.savedKeys.api_version || "2023-06-01";
+        document.getElementById("maxTokens").value =
+          window.savedKeys.max_tokens || 4096;
+
+        // Solo requerir si no hay key guardada
+        if (!window.savedKeys.anthropic_api_key) {
+          apiKeyInput.setAttribute("required", "required");
+        }
+      }
     } else if (provider === "openai") {
       // OpenAI requiere OPENAI_API_KEY
       apiKeyFields.style.display = "block";
       openaiFields.style.display = "block";
       apiKeyLabel.textContent = "OpenAI API Key";
       apiKeyLink.href = "https://platform.openai.com/api-keys";
-      apiKeyInput.setAttribute("required", "required");
       apiKeyInput.placeholder = "sk-...";
+
+      // Pre-llenar con valores guardados
+      if (window.savedKeys) {
+        apiKeyInput.value = window.savedKeys.openai_api_key || "";
+        document.getElementById("orgId").value =
+          window.savedKeys.organization_id || "";
+        document.getElementById("baseUrl").value =
+          window.savedKeys.base_url || "";
+
+        // Solo requerir si no hay key guardada
+        if (!window.savedKeys.openai_api_key) {
+          apiKeyInput.setAttribute("required", "required");
+        }
+      }
     } else {
       apiKeyFields.style.display = "none";
     }
