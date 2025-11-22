@@ -563,32 +563,6 @@ venv/bin/python -m pytest tests/test_auth.py tests/test_predict.py tests/test_fe
 - **GPU no detectada**: instalar nvidia-docker, usar imagen CUDA
 - **Modelo no carga**: verificar DEFAULT_MODEL válido o en cache
 
-## Próximos Pasos (Futuro)
-
-- [ ] **Tests M3**: Test coverage para training module
-- [ ] **Persistencia Jobs**: SQLite para jobs de entrenamiento
-- [ ] **WebSocket Streaming**: Reemplazar polling por WebSocket para progreso en tiempo real
-- [ ] **RAG Pipeline**: Integración embeddings + retrieval + generation
-- [ ] **Multi-model inference**: Servir múltiples modelos simultáneamente
-- [ ] **Model quantization**: GGUF, AWQ para modelos más ligeros
-- [ ] **Prometheus metrics**: Exportar métricas detalladas
-- [ ] **Kubernetes deployment**: Helm charts y manifests
-- [ ] **CI/CD pipeline**: GitHub Actions para tests y deployment
-
-## Licencia
-
-No especificada. Añade un archivo `LICENSE` si corresponde.
-
-## Contribuir
-
-1. Fork el repositorio
-2. Crear branch feature: `git checkout -b feature/amazing-feature`
-3. Commit cambios: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Abrir Pull Request
-
-## Changelog
-
 ### M3 (Noviembre 2025)
 
 - ✅ **Sistema de Entrenamiento Completo**:
