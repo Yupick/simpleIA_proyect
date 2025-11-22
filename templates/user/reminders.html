@@ -1,0 +1,723 @@
+{% extends "user/user_layout.html" %} {% block title %}Mis Recordatorios -
+SimpleIA{% endblock %} {% block extra_css %}
+<style>
+  .reminders-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-header p {
+    color: #718096;
+    font-size: 0.95rem;
+  }
+
+  /* Sección de preferencias */
+  .preferences-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+  }
+
+  .preferences-section h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .preference-group {
+    margin-bottom: 2rem;
+  }
+
+  .preference-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .preference-group h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 1rem;
+  }
+
+  .preference-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+  }
+
+  .preference-label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .channel-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: white;
+  }
+
+  .preference-info h5 {
+    font-weight: 500;
+    color: #1a202c;
+    margin-bottom: 0.25rem;
+  }
+
+  .preference-info p {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 52px;
+    height: 28px;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #e5e7eb;
+    transition: 0.4s;
+    border-radius: 28px;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .toggle-slider {
+    background-color: #3b82f6;
+  }
+
+  input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+  }
+
+  /* Tiempo de anticipación */
+  .timing-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .timing-card {
+    padding: 1rem;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .timing-card:hover {
+    border-color: #3b82f6;
+  }
+
+  .timing-card.selected {
+    background: #dbeafe;
+    border-color: #3b82f6;
+  }
+
+  .timing-card input[type="radio"] {
+    display: none;
+  }
+
+  .timing-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 0.25rem;
+  }
+
+  .timing-label {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+
+  /* Historial de recordatorios */
+  .history-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .history-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+  }
+
+  .history-filters {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .filter-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+
+  .filter-btn.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+
+  .reminders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .reminder-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 3px solid;
+  }
+
+  .reminder-item.sent {
+    border-left-color: #10b981;
+  }
+
+  .reminder-item.pending {
+    border-left-color: #f59e0b;
+  }
+
+  .reminder-item.failed {
+    border-left-color: #ef4444;
+  }
+
+  .reminder-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .reminder-item.sent .reminder-icon {
+    background: #d1fae5;
+  }
+
+  .reminder-item.pending .reminder-icon {
+    background: #fed7aa;
+  }
+
+  .reminder-item.failed .reminder-icon {
+    background: #fee2e2;
+  }
+
+  .reminder-content {
+    flex: 1;
+  }
+
+  .reminder-title {
+    font-weight: 500;
+    color: #1a202c;
+    margin-bottom: 0.25rem;
+  }
+
+  .reminder-details {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+
+  .reminder-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .reminder-item.sent .reminder-badge {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .reminder-item.pending .reminder-badge {
+    background: #fed7aa;
+    color: #92400e;
+  }
+
+  .reminder-item.failed .reminder-badge {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  /* Botones */
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-primary {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #2563eb;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .reminders-container {
+      padding: 1rem;
+    }
+
+    .timing-options {
+      grid-template-columns: 1fr;
+    }
+
+    .history-filters {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="reminders-container">
+  <!-- Encabezado -->
+  <div class="page-header">
+    <h1>🔔 Mis Recordatorios</h1>
+    <p>Configura cómo y cuándo recibes notificaciones</p>
+  </div>
+
+  <!-- Preferencias -->
+  <div class="preferences-section">
+    <h3>⚙️ Preferencias de Notificación</h3>
+
+    <!-- Canales de notificación -->
+    <div class="preference-group">
+      <h4>Canales de Notificación</h4>
+
+      <div class="preference-option">
+        <div class="preference-label">
+          <div class="channel-icon">📧</div>
+          <div class="preference-info">
+            <h5>Email</h5>
+            <p>Recibir recordatorios por correo electrónico</p>
+          </div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="emailNotifications" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="preference-option">
+        <div class="preference-label">
+          <div class="channel-icon">💬</div>
+          <div class="preference-info">
+            <h5>WhatsApp</h5>
+            <p>Recibir recordatorios por WhatsApp</p>
+          </div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="whatsappNotifications" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="preference-option">
+        <div class="preference-label">
+          <div class="channel-icon">🌐</div>
+          <div class="preference-info">
+            <h5>Navegador</h5>
+            <p>Notificaciones push en el navegador</p>
+          </div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="browserNotifications" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Tiempo de anticipación para tareas -->
+    <div class="preference-group">
+      <h4>Recordatorios de Tareas</h4>
+      <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem">
+        ¿Con cuánta anticipación quieres recibir recordatorios de tus tareas?
+      </p>
+
+      <div class="timing-options">
+        <label class="timing-card">
+          <input type="radio" name="taskTiming" value="15" />
+          <div class="timing-value">15 min</div>
+          <div class="timing-label">Antes</div>
+        </label>
+        <label class="timing-card">
+          <input type="radio" name="taskTiming" value="60" checked />
+          <div class="timing-value">1 hora</div>
+          <div class="timing-label">Antes</div>
+        </label>
+        <label class="timing-card">
+          <input type="radio" name="taskTiming" value="1440" />
+          <div class="timing-value">1 día</div>
+          <div class="timing-label">Antes</div>
+        </label>
+        <label class="timing-card">
+          <input type="radio" name="taskTiming" value="2880" />
+          <div class="timing-value">2 días</div>
+          <div class="timing-label">Antes</div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Tiempo de anticipación para citas -->
+    <div class="preference-group">
+      <h4>Recordatorios de Citas</h4>
+      <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem">
+        ¿Con cuánta anticipación quieres recibir recordatorios de tus citas?
+      </p>
+
+      <div class="timing-options">
+        <label class="timing-card selected">
+          <input type="radio" name="appointmentTiming" value="15" checked />
+          <div class="timing-value">15 min</div>
+          <div class="timing-label">Antes</div>
+        </label>
+        <label class="timing-card">
+          <input type="radio" name="appointmentTiming" value="30" />
+          <div class="timing-value">30 min</div>
+          <div class="timing-label">Antes</div>
+        </label>
+        <label class="timing-card">
+          <input type="radio" name="appointmentTiming" value="60" />
+          <div class="timing-value">1 hora</div>
+          <div class="timing-label">Antes</div>
+        </label>
+        <label class="timing-card">
+          <input type="radio" name="appointmentTiming" value="1440" />
+          <div class="timing-value">1 día</div>
+          <div class="timing-label">Antes</div>
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-top: 1.5rem">
+      <button class="btn btn-primary" onclick="savePreferences()">
+        💾 Guardar Preferencias
+      </button>
+    </div>
+  </div>
+
+  <!-- Historial de recordatorios -->
+  <div class="history-section">
+    <div class="history-header">
+      <h3>📜 Historial de Recordatorios</h3>
+      <div class="history-filters">
+        <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn" data-filter="sent">Enviados</button>
+        <button class="filter-btn" data-filter="pending">Pendientes</button>
+        <button class="filter-btn" data-filter="failed">Fallidos</button>
+      </div>
+    </div>
+
+    <div class="reminders-list" id="remindersList">
+      <div class="reminder-item sent">
+        <div class="reminder-icon">✓</div>
+        <div class="reminder-content">
+          <div class="reminder-title">Recordatorio: Revisar el código</div>
+          <div class="reminder-details">
+            <span>📧 Email</span>
+            <span>•</span>
+            <span>Hace 2 horas</span>
+          </div>
+        </div>
+        <div class="reminder-badge">Enviado</div>
+      </div>
+
+      <div class="reminder-item sent">
+        <div class="reminder-icon">✓</div>
+        <div class="reminder-content">
+          <div class="reminder-title">Cita: Reunión con cliente</div>
+          <div class="reminder-details">
+            <span>💬 WhatsApp</span>
+            <span>•</span>
+            <span>Hace 5 horas</span>
+          </div>
+        </div>
+        <div class="reminder-badge">Enviado</div>
+      </div>
+
+      <div class="reminder-item pending">
+        <div class="reminder-icon">⏱</div>
+        <div class="reminder-content">
+          <div class="reminder-title">Tarea: Enviar reporte</div>
+          <div class="reminder-details">
+            <span>📧 Email</span>
+            <span>•</span>
+            <span>Programado para dentro de 1 hora</span>
+          </div>
+        </div>
+        <div class="reminder-badge">Pendiente</div>
+      </div>
+
+      <div class="reminder-item failed">
+        <div class="reminder-icon">⚠</div>
+        <div class="reminder-content">
+          <div class="reminder-title">Recordatorio: Llamar a Juan</div>
+          <div class="reminder-details">
+            <span>💬 WhatsApp</span>
+            <span>•</span>
+            <span>Hace 1 día</span>
+            <span>•</span>
+            <span style="color: #ef4444">Error: WhatsApp no conectado</span>
+          </div>
+        </div>
+        <div class="reminder-badge">Fallido</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Cargar preferencias
+    loadPreferences();
+
+    // Cargar historial
+    loadReminderHistory();
+
+    // Filtros de historial
+    document.querySelectorAll(".filter-btn").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        document
+          .querySelectorAll(".filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        this.classList.add("active");
+        filterReminders(this.dataset.filter);
+      });
+    });
+
+    // Timing cards interactivos
+    document.querySelectorAll(".timing-card").forEach((card) => {
+      card.addEventListener("click", function () {
+        const group = this.querySelector("input").name;
+        document.querySelectorAll(`input[name="${group}"]`).forEach((input) => {
+          input.parentElement.classList.remove("selected");
+        });
+        this.classList.add("selected");
+        this.querySelector("input").checked = true;
+      });
+    });
+  });
+
+  async function loadPreferences() {
+    try {
+      const response = await fetch("/api/user/reminders/preferences");
+      if (response.ok) {
+        const prefs = await response.json();
+
+        document.getElementById("emailNotifications").checked =
+          prefs.email_enabled || false;
+        document.getElementById("whatsappNotifications").checked =
+          prefs.whatsapp_enabled || false;
+        document.getElementById("browserNotifications").checked =
+          prefs.browser_enabled || false;
+
+        if (prefs.task_timing) {
+          const taskRadio = document.querySelector(
+            `input[name="taskTiming"][value="${prefs.task_timing}"]`
+          );
+          if (taskRadio) {
+            taskRadio.checked = true;
+            taskRadio.parentElement.classList.add("selected");
+          }
+        }
+
+        if (prefs.appointment_timing) {
+          const aptRadio = document.querySelector(
+            `input[name="appointmentTiming"][value="${prefs.appointment_timing}"]`
+          );
+          if (aptRadio) {
+            aptRadio.checked = true;
+            aptRadio.parentElement.classList.add("selected");
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error cargando preferencias:", error);
+    }
+  }
+
+  async function savePreferences() {
+    const preferences = {
+      email_enabled: document.getElementById("emailNotifications").checked,
+      whatsapp_enabled: document.getElementById("whatsappNotifications")
+        .checked,
+      browser_enabled: document.getElementById("browserNotifications").checked,
+      task_timing: parseInt(
+        document.querySelector('input[name="taskTiming"]:checked').value
+      ),
+      appointment_timing: parseInt(
+        document.querySelector('input[name="appointmentTiming"]:checked').value
+      ),
+    };
+
+    try {
+      const response = await fetch("/api/user/reminders/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(preferences),
+      });
+
+      if (response.ok) {
+        alert("✅ Preferencias guardadas exitosamente");
+      }
+    } catch (error) {
+      console.error("Error guardando preferencias:", error);
+      alert("Error al guardar preferencias");
+    }
+  }
+
+  async function loadReminderHistory() {
+    try {
+      const response = await fetch("/api/user/reminders/history");
+      if (response.ok) {
+        const reminders = await response.json();
+        updateRemindersUI(reminders);
+      }
+    } catch (error) {
+      console.error("Error cargando historial:", error);
+    }
+  }
+
+  function updateRemindersUI(reminders) {
+    const remindersList = document.getElementById("remindersList");
+    if (!reminders || reminders.length === 0) return;
+
+    remindersList.innerHTML = reminders
+      .map((reminder) => {
+        const statusClass = reminder.status || "sent";
+        const icon =
+          statusClass === "sent" ? "✓" : statusClass === "pending" ? "⏱" : "⚠";
+
+        const channelIcon =
+          reminder.channel === "email"
+            ? "📧"
+            : reminder.channel === "whatsapp"
+            ? "💬"
+            : "🌐";
+
+        return `
+            <div class="reminder-item ${statusClass}">
+                <div class="reminder-icon">${icon}</div>
+                <div class="reminder-content">
+                    <div class="reminder-title">${reminder.title}</div>
+                    <div class="reminder-details">
+                        <span>${channelIcon} ${reminder.channel_label}</span>
+                        <span>•</span>
+                        <span>${reminder.time_ago}</span>
+                        ${
+                          reminder.error
+                            ? `<span>•</span><span style="color: #ef4444;">${reminder.error}</span>`
+                            : ""
+                        }
+                    </div>
+                </div>
+                <div class="reminder-badge">${reminder.status_label}</div>
+            </div>
+        `;
+      })
+      .join("");
+  }
+
+  function filterReminders(filter) {
+    const reminders = document.querySelectorAll(".reminder-item");
+    reminders.forEach((reminder) => {
+      if (filter === "all" || reminder.classList.contains(filter)) {
+        reminder.style.display = "flex";
+      } else {
+        reminder.style.display = "none";
+      }
+    });
+  }
+</script>
+{% endblock %}

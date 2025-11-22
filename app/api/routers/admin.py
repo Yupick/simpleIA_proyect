@@ -387,6 +387,77 @@ async def get_current_provider(current_user=Depends(get_current_admin_user)):
     }
 
 
+@router.get("/providers/models")
+async def get_available_models(
+    provider: Optional[str] = None,
+    current_user=Depends(get_current_admin_user)
+):
+    """
+    Obtiene lista de modelos disponibles por provider.
+    Si no se especifica provider, retorna todos.
+    Requiere permisos de administrador.
+    """
+    # Modelos disponibles por provider
+    all_models = {
+        "huggingface": {
+            "spanish": [
+                {"id": "DeepESP/gpt2-spanish", "name": "GPT-2 Spanish (DeepESP) ⭐", "size": "500MB"},
+                {"id": "PlanTL-GOB-ES/gpt2-base-bne", "name": "GPT-2 BNE (Gobierno ES) ⭐", "size": "500MB"},
+                {"id": "datificate/gpt2-small-spanish", "name": "GPT-2 Small Spanish", "size": "500MB"},
+                {"id": "flax-community/gpt-2-spanish", "name": "GPT-2 Spanish (Flax)", "size": "500MB"},
+            ],
+            "english": [
+                {"id": "gpt2", "name": "GPT-2 Base", "size": "500MB"},
+                {"id": "gpt2-medium", "name": "GPT-2 Medium", "size": "1.5GB"},
+                {"id": "distilgpt2", "name": "DistilGPT-2 (Rápido)", "size": "300MB"},
+                {"id": "EleutherAI/gpt-neo-125M", "name": "GPT-Neo 125M", "size": "500MB"},
+            ],
+            "multilingual": [
+                {"id": "bigscience/bloomz-560m", "name": "BLOOMZ-560M (46 idiomas) ⭐", "size": "2.5GB"},
+                {"id": "bigscience/bloom-560m", "name": "BLOOM-560M", "size": "2.5GB"},
+            ],
+            "local": []  # Se llenará con modelos locales
+        },
+        "claude": [
+            {"id": "claude-3-5-sonnet-20241022", "name": "Claude 3.5 Sonnet (Latest) ⭐", "cost": "$3/1M tokens"},
+            {"id": "claude-3-opus-20240229", "name": "Claude 3 Opus", "cost": "$15/1M tokens"},
+            {"id": "claude-3-sonnet-20240229", "name": "Claude 3 Sonnet", "cost": "$3/1M tokens"},
+            {"id": "claude-3-haiku-20240307", "name": "Claude 3 Haiku", "cost": "$0.25/1M tokens"},
+        ],
+        "openai": [
+            {"id": "gpt-4o-mini", "name": "GPT-4o Mini ⭐", "cost": "$0.15/1M tokens"},
+            {"id": "gpt-4o", "name": "GPT-4o", "cost": "$2.50/1M tokens"},
+            {"id": "gpt-4-turbo", "name": "GPT-4 Turbo", "cost": "$10/1M tokens"},
+            {"id": "gpt-4", "name": "GPT-4", "cost": "$30/1M tokens"},
+            {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo", "cost": "$0.50/1M tokens"},
+        ]
+    }
+    
+    # Agregar modelos entrenados localmente
+    BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+    model_dir = BASE_DIR / "model_llm"
+    if model_dir.exists():
+        local_models = []
+        for model_path in model_dir.iterdir():
+            if model_path.is_dir() and (model_path / "config.json").exists():
+                local_models.append({
+                    "id": str(model_path.relative_to(BASE_DIR)),
+                    "name": f"🎓 {model_path.name} (Entrenado)",
+                    "size": "Local"
+                })
+        if local_models:
+            all_models["huggingface"]["local"] = local_models
+    
+    # Si se especifica provider, retornar solo ese
+    if provider:
+        return {
+            "provider": provider,
+            "models": all_models.get(provider, [])
+        }
+    
+    return {"providers": all_models}
+
+
 @router.post("/providers/switch")
 async def switch_provider(
     data: ProviderSwitch,

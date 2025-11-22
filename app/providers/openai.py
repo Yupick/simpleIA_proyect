@@ -19,9 +19,9 @@ class OpenAIProvider(BaseLLMProvider):
         self.model_name = model_name
         self.base_url = base_url
     
-    def generate(
+    async def generate(
         self,
-        prompt: str,
+        prompt,  # Puede ser str o List[Dict]
         max_length: int = 100,
         num_return_sequences: int = 1,
         temperature: float = 0.7,
@@ -31,7 +31,7 @@ class OpenAIProvider(BaseLLMProvider):
         Genera texto usando OpenAI API.
         
         Args:
-            prompt: Texto de entrada
+            prompt: Texto de entrada (str) o lista de mensajes (List[Dict])
             max_length: Tokens máximos
             num_return_sequences: Número de respuestas (se usa 'n' en API)
             temperature: Control de aleatoriedad (0.0-2.0)
@@ -44,19 +44,25 @@ class OpenAIProvider(BaseLLMProvider):
             "Content-Type": "application/json"
         }
         
+        # Convertir prompt a formato de mensajes
+        if isinstance(prompt, str):
+            messages = [{"role": "user", "content": prompt}]
+        elif isinstance(prompt, list):
+            messages = prompt
+        else:
+            return "[ERROR] Formato de prompt inválido"
+        
         payload = {
             "model": self.model_name,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
+            "messages": messages,
             "max_tokens": max_length,
             "temperature": min(max(temperature, 0.0), 2.0),
             "n": num_return_sequences
         }
         
         try:
-            with httpx.Client(timeout=30.0) as client:
-                response = client.post(self.base_url, json=payload, headers=headers)
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(self.base_url, json=payload, headers=headers)
                 response.raise_for_status()
                 data = response.json()
                 

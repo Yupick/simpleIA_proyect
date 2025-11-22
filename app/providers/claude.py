@@ -15,9 +15,9 @@ class ClaudeProvider(BaseLLMProvider):
         self.base_url = "https://api.anthropic.com/v1/messages"
         self.api_version = "2023-06-01"
     
-    def generate(
+    async def generate(
         self,
-        prompt: str,
+        prompt,  # Puede ser str o List[Dict]
         max_length: int = 100,
         num_return_sequences: int = 1,
         temperature: float = 0.7,
@@ -27,7 +27,7 @@ class ClaudeProvider(BaseLLMProvider):
         Genera texto usando Claude API.
         
         Args:
-            prompt: Texto de entrada
+            prompt: Texto de entrada (str) o lista de mensajes (List[Dict])
             max_length: Tokens máximos (se mapea a max_tokens)
             num_return_sequences: Ignorado (Claude no soporta múltiples secuencias)
             temperature: Control de aleatoriedad (0.0-1.0)
@@ -41,18 +41,40 @@ class ClaudeProvider(BaseLLMProvider):
             "content-type": "application/json"
         }
         
+        # Convertir prompt a formato de mensajes Claude
+        if isinstance(prompt, str):
+            messages = [{"role": "user", "content": prompt}]
+        elif isinstance(prompt, list):
+            # Convertir lista de mensajes al formato Claude
+            # Claude necesita que system sea un parámetro separado
+            messages = []
+            system_message = None
+            
+            for msg in prompt:
+                if msg.get("role") == "system":
+                    system_message = msg.get("content", "")
+                elif msg.get("role") in ["user", "assistant"]:
+                    messages.append({
+                        "role": msg["role"],
+                        "content": msg.get("content", "")
+                    })
+        else:
+            return "[ERROR] Formato de prompt inválido"
+        
         payload = {
             "model": self.model_name,
             "max_tokens": max_length,
             "temperature": min(max(temperature, 0.0), 1.0),
-            "messages": [
-                {"role": "user", "content": prompt}
-            ]
+            "messages": messages
         }
         
+        # Agregar system message si existe
+        if isinstance(prompt, list) and system_message:
+            payload["system"] = system_message
+        
         try:
-            with httpx.Client(timeout=30.0) as client:
-                response = client.post(self.base_url, json=payload, headers=headers)
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(self.base_url, json=payload, headers=headers)
                 response.raise_for_status()
                 data = response.json()
                 

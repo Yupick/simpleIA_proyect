@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Mi Panel - SimpleIA{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <style>
+      /* User Panel Specific Styles */
+      .user-navbar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .user-navbar-brand {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: white;
+      }
+
+      .user-navbar-menu {
+        display: flex;
+        gap: 2rem;
+      }
+
+      .user-navbar-menu a {
+        color: white;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        transition: background 0.3s;
+      }
+
+      .user-navbar-menu a:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .user-navbar-menu a.active {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: white;
+      }
+
+      .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+      }
+
+      .user-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 2rem;
+      }
+
+      .user-card {
+        background: #1a1d29;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .user-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #2a2d3a;
+      }
+
+      .user-card-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #e0e0e0;
+      }
+
+      .user-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+
+      .user-stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        color: white;
+      }
+
+      .user-stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+      }
+
+      .user-stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+      }
+
+      .quick-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .quick-action-btn {
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-commercial {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+      }
+
+      .btn-personal {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+      }
+
+      .btn-chat {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+      }
+    </style>
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    <!-- User Navbar -->
+    <nav class="user-navbar">
+      <div class="user-navbar-brand">🤖 SimpleIA</div>
+
+      <div class="user-navbar-menu">
+        <a
+          href="/user/dashboard"
+          class="{{ 'active' if request.url.path == '/user/dashboard' else '' }}"
+        >
+          🏠 Inicio
+        </a>
+        <a
+          href="/user/commercial/products"
+          class="{{ 'active' if '/commercial' in request.url.path else '' }}"
+        >
+          💼 Comercial
+        </a>
+        <a
+          href="/user/personal/calendar"
+          class="{{ 'active' if '/personal' in request.url.path else '' }}"
+        >
+          📅 Personal
+        </a>
+        <a
+          href="/user/chat"
+          class="{{ 'active' if request.url.path == '/user/chat' else '' }}"
+        >
+          💬 Chat
+        </a>
+      </div>
+
+      <div class="user-info">
+        <div class="user-avatar">{{ user.username[0].upper() }}</div>
+        <div>
+          <div style="font-weight: 600">{{ user.username }}</div>
+          <div style="font-size: 0.75rem; opacity: 0.8">Usuario</div>
+        </div>
+        <a href="/logout" style="color: white; margin-left: 1rem">Salir</a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="user-container">{% block content %}{% endblock %}</div>
+
+    <!-- Toast Notifications -->
+    <div
+      id="toast"
+      class="alert"
+      style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        display: none;
+        z-index: 3000;
+        min-width: 300px;
+      "
+    ></div>
+
+    <!-- Scripts -->
+    <script>
+      function showToast(message, type = "success") {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = `alert alert-${type}`;
+        toast.style.display = "block";
+        setTimeout(() => (toast.style.display = "none"), 3000);
+      }
+
+      // Auto-refresh user info (opcional)
+      async function refreshUserInfo() {
+        try {
+          const response = await fetch("/api/user/info");
+          const data = await response.json();
+          // Actualizar UI si es necesario
+        } catch (error) {
+          console.error("Error refreshing user info:", error);
+        }
+      }
+    </script>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

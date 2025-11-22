@@ -1,0 +1,1031 @@
+{% extends "user/user_layout.html" %} {% block title %}Mis Tareas - {{ app_name
+}}{% endblock %} {% block extra_css %}
+<style>
+  .tasks-container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .tasks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .tasks-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+  }
+
+  .stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #667eea;
+  }
+
+  .stat-card.warning {
+    border-left-color: #ff9800;
+  }
+
+  .stat-card.success {
+    border-left-color: #4caf50;
+  }
+
+  .stat-card.danger {
+    border-left-color: #f44336;
+  }
+
+  .stat-number {
+    font-size: 2em;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 5px;
+  }
+
+  .stat-label {
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .filters-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+  }
+
+  .filters-row {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  .filter-btn {
+    padding: 8px 16px;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9em;
+  }
+
+  .filter-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+  }
+
+  .priority-filter {
+    padding: 8px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.9em;
+  }
+
+  .add-task-btn {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s;
+  }
+
+  .add-task-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+  }
+
+  .tasks-sections {
+    display: grid;
+    gap: 20px;
+  }
+
+  .task-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+  }
+
+  .section-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-count {
+    background: #667eea;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85em;
+  }
+
+  .task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .task-card {
+    background: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.3s;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 15px;
+    align-items: start;
+  }
+
+  .task-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+    background: white;
+  }
+
+  .task-card.completed {
+    opacity: 0.6;
+    background: #f5f5f5;
+  }
+
+  .task-card.completed .task-title {
+    text-decoration: line-through;
+    color: #999;
+  }
+
+  .task-card.priority-high {
+    border-left-color: #f44336;
+  }
+
+  .task-card.priority-medium {
+    border-left-color: #ff9800;
+  }
+
+  .task-card.priority-low {
+    border-left-color: #4caf50;
+  }
+
+  .task-card.overdue {
+    border-color: #f44336;
+    background: #ffebee;
+  }
+
+  .task-checkbox {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #667eea;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .task-checkbox.checked {
+    background: #667eea;
+  }
+
+  .task-checkbox.checked::after {
+    content: "✓";
+    color: white;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
+  }
+
+  .task-content {
+    flex: 1;
+  }
+
+  .task-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-size: 1.05em;
+  }
+
+  .task-description {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+
+  .task-meta {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    font-size: 0.85em;
+    color: #888;
+  }
+
+  .task-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .task-meta-item.overdue {
+    color: #f44336;
+    font-weight: 600;
+  }
+
+  .priority-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .priority-badge.high {
+    background: #ffebee;
+    color: #f44336;
+  }
+
+  .priority-badge.medium {
+    background: #fff3e0;
+    color: #ff9800;
+  }
+
+  .priority-badge.low {
+    background: #e8f5e9;
+    color: #4caf50;
+  }
+
+  .category-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    background: #e3f2fd;
+    color: #1976d2;
+  }
+
+  .task-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .task-action-btn {
+    padding: 6px 12px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .task-action-btn:hover {
+    background: #f8f9fa;
+  }
+
+  .task-action-btn.danger {
+    color: #f44336;
+  }
+
+  .task-action-btn.danger:hover {
+    background: #ffebee;
+  }
+
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal.active {
+    display: flex;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    color: #2c3e50;
+  }
+
+  .close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: #999;
+  }
+
+  .close-modal:hover {
+    color: #333;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: border-color 0.3s;
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+
+  .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  .btn-cancel {
+    padding: 10px 20px;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+
+  .btn-cancel:hover {
+    background: #f8f9fa;
+  }
+
+  .btn-submit {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+  }
+
+  .empty-state-icon {
+    font-size: 3em;
+    margin-bottom: 15px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .tasks-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .task-card {
+      grid-template-columns: auto 1fr;
+    }
+
+    .task-actions {
+      grid-column: 2;
+      flex-direction: row;
+    }
+
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="content-header">
+  <h1>✅ Mis Tareas</h1>
+  <p>Organiza y prioriza tus actividades</p>
+</div>
+
+<div class="tasks-container">
+  <!-- Estadísticas -->
+  <div class="tasks-stats">
+    <div class="stat-card">
+      <div class="stat-number" id="totalTasks">0</div>
+      <div class="stat-label">Total de Tareas</div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-number" id="completedTasks">0</div>
+      <div class="stat-label">Completadas</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-number" id="pendingTasks">0</div>
+      <div class="stat-label">Pendientes</div>
+    </div>
+    <div class="stat-card danger">
+      <div class="stat-number" id="overdueTasks">0</div>
+      <div class="stat-label">Vencidas</div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters-section">
+    <div class="filters-row">
+      <div class="filter-group">
+        <button
+          class="filter-btn active"
+          onclick="filterByStatus('all')"
+          data-status="all"
+        >
+          Todas
+        </button>
+        <button
+          class="filter-btn"
+          onclick="filterByStatus('pending')"
+          data-status="pending"
+        >
+          Pendientes
+        </button>
+        <button
+          class="filter-btn"
+          onclick="filterByStatus('in_progress')"
+          data-status="in_progress"
+        >
+          En Progreso
+        </button>
+        <button
+          class="filter-btn"
+          onclick="filterByStatus('completed')"
+          data-status="completed"
+        >
+          Completadas
+        </button>
+      </div>
+
+      <select class="priority-filter" onchange="filterByPriority(this.value)">
+        <option value="all">Todas las prioridades</option>
+        <option value="high">🔴 Alta</option>
+        <option value="medium">🟡 Media</option>
+        <option value="low">🟢 Baja</option>
+      </select>
+
+      <div style="flex: 1"></div>
+
+      <button class="add-task-btn" onclick="openTaskModal()">
+        ➕ Nueva Tarea
+      </button>
+    </div>
+  </div>
+
+  <!-- Secciones de tareas -->
+  <div class="tasks-sections">
+    <!-- Tareas vencidas -->
+    <div class="task-section" id="overdueSection" style="display: none">
+      <div class="section-header">
+        <div class="section-title">
+          ⚠️ Tareas Vencidas
+          <span class="section-count" id="overdueCount">0</span>
+        </div>
+      </div>
+      <div class="task-list" id="overdueList"></div>
+    </div>
+
+    <!-- Tareas de alta prioridad -->
+    <div class="task-section" id="highPrioritySection" style="display: none">
+      <div class="section-header">
+        <div class="section-title">
+          🔴 Alta Prioridad
+          <span class="section-count" id="highPriorityCount">0</span>
+        </div>
+      </div>
+      <div class="task-list" id="highPriorityList"></div>
+    </div>
+
+    <!-- Todas las tareas -->
+    <div class="task-section">
+      <div class="section-header">
+        <div class="section-title">
+          📋 Todas las Tareas
+          <span class="section-count" id="allTasksCount">0</span>
+        </div>
+      </div>
+      <div class="task-list" id="allTasksList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de crear/editar tarea -->
+<div id="taskModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modalTitle">Nueva Tarea</h2>
+      <button class="close-modal" onclick="closeTaskModal()">×</button>
+    </div>
+
+    <form id="taskForm" onsubmit="saveTask(event)">
+      <input type="hidden" id="taskId" />
+
+      <div class="form-group">
+        <label for="title">Título *</label>
+        <input
+          type="text"
+          id="title"
+          required
+          placeholder="Ej: Terminar reporte mensual"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="description">Descripción</label>
+        <textarea
+          id="description"
+          placeholder="Detalles de la tarea..."
+        ></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="priority">Prioridad *</label>
+          <select id="priority" required>
+            <option value="low">🟢 Baja</option>
+            <option value="medium" selected>🟡 Media</option>
+            <option value="high">🔴 Alta</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="status">Estado</label>
+          <select id="status">
+            <option value="pending">Pendiente</option>
+            <option value="in_progress">En Progreso</option>
+            <option value="completed">Completada</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="dueDate">Fecha de vencimiento</label>
+          <input type="date" id="dueDate" />
+        </div>
+        <div class="form-group">
+          <label for="category">Categoría</label>
+          <input
+            type="text"
+            id="category"
+            placeholder="Ej: Trabajo, Personal"
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reminderMinutes">Recordatorio</label>
+        <select id="reminderMinutes">
+          <option value="0">Sin recordatorio</option>
+          <option value="60" selected>1 hora antes</option>
+          <option value="1440">1 día antes</option>
+          <option value="2880">2 días antes</option>
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" onclick="closeTaskModal()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn-submit">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  let tasks = [];
+  let currentStatusFilter = "all";
+  let currentPriorityFilter = "all";
+  let token = localStorage.getItem("token");
+
+  // Inicializar
+  document.addEventListener("DOMContentLoaded", () => {
+    loadTasks();
+  });
+
+  // Cargar tareas
+  async function loadTasks() {
+    try {
+      const response = await fetch("/api/user/personal/tasks", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error("Error al cargar tareas");
+
+      tasks = await response.json();
+      updateStats();
+      renderTasks();
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  }
+
+  // Actualizar estadísticas
+  function updateStats() {
+    const now = new Date();
+    const completed = tasks.filter((t) => t.status === "completed").length;
+    const pending = tasks.filter((t) => t.status !== "completed").length;
+    const overdue = tasks.filter((t) => {
+      if (!t.due_date || t.status === "completed") return false;
+      return new Date(t.due_date) < now;
+    }).length;
+
+    document.getElementById("totalTasks").textContent = tasks.length;
+    document.getElementById("completedTasks").textContent = completed;
+    document.getElementById("pendingTasks").textContent = pending;
+    document.getElementById("overdueTasks").textContent = overdue;
+  }
+
+  // Renderizar tareas
+  function renderTasks() {
+    const filteredTasks = filterTasks();
+    const now = new Date();
+
+    // Separar por categorías
+    const overdue = filteredTasks.filter((t) => {
+      if (!t.due_date || t.status === "completed") return false;
+      return new Date(t.due_date) < now;
+    });
+
+    const highPriority = filteredTasks.filter(
+      (t) =>
+        t.priority === "high" &&
+        t.status !== "completed" &&
+        !overdue.includes(t)
+    );
+
+    // Renderizar cada sección
+    renderTaskList("overdueList", overdue);
+    renderTaskList("highPriorityList", highPriority);
+    renderTaskList("allTasksList", filteredTasks);
+
+    // Mostrar/ocultar secciones
+    document.getElementById("overdueSection").style.display = overdue.length
+      ? "block"
+      : "none";
+    document.getElementById("highPrioritySection").style.display =
+      highPriority.length ? "block" : "none";
+
+    // Actualizar contadores
+    document.getElementById("overdueCount").textContent = overdue.length;
+    document.getElementById("highPriorityCount").textContent =
+      highPriority.length;
+    document.getElementById("allTasksCount").textContent = filteredTasks.length;
+  }
+
+  // Renderizar lista de tareas
+  function renderTaskList(containerId, tasksList) {
+    const container = document.getElementById(containerId);
+
+    if (tasksList.length === 0) {
+      container.innerHTML =
+        '<div class="empty-state"><div class="empty-state-icon">✨</div><p>No hay tareas</p></div>';
+      return;
+    }
+
+    container.innerHTML = tasksList
+      .map((task) => {
+        const isOverdue =
+          task.due_date &&
+          new Date(task.due_date) < new Date() &&
+          task.status !== "completed";
+        const isCompleted = task.status === "completed";
+
+        return `
+            <div class="task-card ${isCompleted ? "completed" : ""} ${
+          isOverdue ? "overdue" : ""
+        } priority-${task.priority}">
+                <div class="task-checkbox ${isCompleted ? "checked" : ""}" 
+                     onclick="toggleTaskStatus(${task.id})">
+                </div>
+                
+                <div class="task-content" onclick="editTask(${task.id})">
+                    <div class="task-title">${escapeHtml(task.title)}</div>
+                    ${
+                      task.description
+                        ? `<div class="task-description">${escapeHtml(
+                            task.description
+                          )}</div>`
+                        : ""
+                    }
+                    
+                    <div class="task-meta">
+                        <div class="task-meta-item">
+                            <span class="priority-badge ${
+                              task.priority
+                            }">${translatePriority(task.priority)}</span>
+                        </div>
+                        ${
+                          task.category
+                            ? `<div class="task-meta-item"><span class="category-badge">${task.category}</span></div>`
+                            : ""
+                        }
+                        ${
+                          task.due_date
+                            ? `
+                            <div class="task-meta-item ${
+                              isOverdue ? "overdue" : ""
+                            }">
+                                📅 ${formatDate(task.due_date)}
+                            </div>
+                        `
+                            : ""
+                        }
+                        ${
+                          task.reminder_minutes > 0
+                            ? `<div class="task-meta-item">🔔 ${task.reminder_minutes} min</div>`
+                            : ""
+                        }
+                    </div>
+                </div>
+                
+                <div class="task-actions">
+                    <button class="task-action-btn" onclick="event.stopPropagation(); editTask(${
+                      task.id
+                    })">
+                        ✏️ Editar
+                    </button>
+                    <button class="task-action-btn danger" onclick="event.stopPropagation(); deleteTask(${
+                      task.id
+                    })">
+                        🗑️ Eliminar
+                    </button>
+                </div>
+            </div>
+        `;
+      })
+      .join("");
+  }
+
+  // Filtrar tareas
+  function filterTasks() {
+    return tasks.filter((task) => {
+      const statusMatch =
+        currentStatusFilter === "all" || task.status === currentStatusFilter;
+      const priorityMatch =
+        currentPriorityFilter === "all" ||
+        task.priority === currentPriorityFilter;
+      return statusMatch && priorityMatch;
+    });
+  }
+
+  // Filtrar por estado
+  function filterByStatus(status) {
+    currentStatusFilter = status;
+    document.querySelectorAll("[data-status]").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.status === status);
+    });
+    renderTasks();
+  }
+
+  // Filtrar por prioridad
+  function filterByPriority(priority) {
+    currentPriorityFilter = priority;
+    renderTasks();
+  }
+
+  // Toggle estado de tarea
+  async function toggleTaskStatus(id) {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    const newStatus = task.status === "completed" ? "pending" : "completed";
+
+    try {
+      const response = await fetch(`/api/user/personal/tasks/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ...task, status: newStatus }),
+      });
+
+      if (!response.ok) throw new Error("Error al actualizar");
+
+      loadTasks();
+    } catch (error) {
+      alert("Error: " + error.message);
+    }
+  }
+
+  // Abrir modal
+  function openTaskModal() {
+    document.getElementById("taskModal").classList.add("active");
+    document.getElementById("taskForm").reset();
+    document.getElementById("taskId").value = "";
+    document.getElementById("modalTitle").textContent = "Nueva Tarea";
+  }
+
+  // Cerrar modal
+  function closeTaskModal() {
+    document.getElementById("taskModal").classList.remove("active");
+  }
+
+  // Guardar tarea
+  async function saveTask(event) {
+    event.preventDefault();
+
+    const id = document.getElementById("taskId").value;
+    const data = {
+      title: document.getElementById("title").value,
+      description: document.getElementById("description").value,
+      priority: document.getElementById("priority").value,
+      status: document.getElementById("status").value,
+      due_date: document.getElementById("dueDate").value || null,
+      category: document.getElementById("category").value || null,
+      reminder_minutes: parseInt(
+        document.getElementById("reminderMinutes").value
+      ),
+    };
+
+    try {
+      const url = id
+        ? `/api/user/personal/tasks/${id}`
+        : "/api/user/personal/tasks";
+      const method = id ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) throw new Error("Error al guardar tarea");
+
+      closeTaskModal();
+      loadTasks();
+    } catch (error) {
+      alert("Error al guardar la tarea: " + error.message);
+    }
+  }
+
+  // Editar tarea
+  function editTask(id) {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    document.getElementById("taskId").value = task.id;
+    document.getElementById("title").value = task.title;
+    document.getElementById("description").value = task.description || "";
+    document.getElementById("priority").value = task.priority;
+    document.getElementById("status").value = task.status;
+    document.getElementById("dueDate").value = task.due_date || "";
+    document.getElementById("category").value = task.category || "";
+    document.getElementById("reminderMinutes").value =
+      task.reminder_minutes || 60;
+
+    document.getElementById("modalTitle").textContent = "Editar Tarea";
+    document.getElementById("taskModal").classList.add("active");
+  }
+
+  // Eliminar tarea
+  async function deleteTask(id) {
+    if (!confirm("¿Estás seguro de eliminar esta tarea?")) return;
+
+    try {
+      const response = await fetch(`/api/user/personal/tasks/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error("Error al eliminar");
+
+      loadTasks();
+    } catch (error) {
+      alert("Error: " + error.message);
+    }
+  }
+
+  // Utilidades
+  function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((date - now) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return `Vencida ${Math.abs(diffDays)} días`;
+    if (diffDays === 0) return "Hoy";
+    if (diffDays === 1) return "Mañana";
+    if (diffDays < 7) return `En ${diffDays} días`;
+
+    return date.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+  }
+
+  function translatePriority(priority) {
+    const translations = {
+      high: "Alta",
+      medium: "Media",
+      low: "Baja",
+    };
+    return translations[priority] || priority;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Cerrar modal al hacer click fuera
+  document.getElementById("taskModal").addEventListener("click", (e) => {
+    if (e.target.id === "taskModal") {
+      closeTaskModal();
+    }
+  });
+</script>
+{% endblock %}

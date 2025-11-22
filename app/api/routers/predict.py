@@ -38,7 +38,7 @@ async def predict(req: PredictRequest, current_user=Depends(get_current_user_opt
             return PredictResponse(generated_text=cached_response)
         
         # Generar respuesta
-        text = model_manager.generate(
+        text = await model_manager.generate(
             req.prompt,
             max_length=req.max_length,
             num_return_sequences=req.num_return_sequences,
@@ -55,7 +55,7 @@ async def predict(req: PredictRequest, current_user=Depends(get_current_user_opt
     # Modo streaming: generar y streamear tokens
     else:
         # Generar texto completo primero
-        text = model_manager.generate(
+        text = await model_manager.generate(
             req.prompt,
             max_length=req.max_length,
             num_return_sequences=req.num_return_sequences,

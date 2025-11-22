@@ -471,10 +471,79 @@ endblock %} {% block content %}
         return;
       }
 
-      if (data.models && data.models.length > 0) {
-        modelSelect.innerHTML = data.models
-          .map((model) => `<option value="${model}">${model}</option>`)
-          .join("");
+      // Limpiar el select
+      modelSelect.innerHTML =
+        '<option value="">Selecciona un modelo...</option>';
+
+      // Si hay modelos detallados por categoría, organizarlos
+      if (data.models_detailed) {
+        const categories = data.models_detailed;
+
+        // Español primero
+        if (categories.spanish && categories.spanish.length > 0) {
+          const optgroup = document.createElement("optgroup");
+          optgroup.label = "🇪🇸 Español";
+          categories.spanish.forEach((model) => {
+            const option = document.createElement("option");
+            option.value = model.name;
+            option.textContent = `${model.name} (${model.size})`;
+            option.title = model.description;
+            optgroup.appendChild(option);
+          });
+          modelSelect.appendChild(optgroup);
+        }
+
+        // English
+        if (categories.english && categories.english.length > 0) {
+          const optgroup = document.createElement("optgroup");
+          optgroup.label = "🇬🇧 English";
+          categories.english.forEach((model) => {
+            const option = document.createElement("option");
+            option.value = model.name;
+            option.textContent = `${model.name} (${model.size})`;
+            option.title = model.description;
+            optgroup.appendChild(option);
+          });
+          modelSelect.appendChild(optgroup);
+        }
+
+        // Multilingüe
+        if (categories.multilingual && categories.multilingual.length > 0) {
+          const optgroup = document.createElement("optgroup");
+          optgroup.label = "🌍 Multilingüe";
+          categories.multilingual.forEach((model) => {
+            const option = document.createElement("option");
+            option.value = model.name;
+            option.textContent = `${model.name} (${model.size})`;
+            option.title = model.description;
+            optgroup.appendChild(option);
+          });
+          modelSelect.appendChild(optgroup);
+        }
+
+        // Modelos entrenados localmente
+        if (categories.local && categories.local.length > 0) {
+          const optgroup = document.createElement("optgroup");
+          optgroup.label = "🎓 Modelos Entrenados Localmente";
+          categories.local.forEach((model) => {
+            const option = document.createElement("option");
+            option.value = model.name;
+            option.textContent = model.name;
+            option.title = model.description;
+            optgroup.appendChild(option);
+          });
+          modelSelect.appendChild(optgroup);
+        }
+
+        console.log(`Modelos organizados por categoría`);
+      } else if (data.models && data.models.length > 0) {
+        // Fallback: lista plana
+        data.models.forEach((modelName) => {
+          const option = document.createElement("option");
+          option.value = modelName;
+          option.textContent = modelName;
+          modelSelect.appendChild(option);
+        });
         console.log(`${data.models.length} modelos cargados en el selector`);
       } else {
         modelSelect.innerHTML =

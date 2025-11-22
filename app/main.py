@@ -12,8 +12,15 @@ from .api.routers.metrics import router as metrics_router
 from .api.routers.embeddings import router as embeddings_router
 from .api.routers.admin import router as admin_router
 from .api.routers.training import router as training_router
+from .api.routers.user.products import router as products_router
+from .api.routers.user.personal import router as personal_router
+from .api.routers.user.chat import router as chat_router
+from .api.routers.whatsapp import router as whatsapp_router
 from .db.sqlite import init_feedback_db, init_user_db
 from .db.training_metrics import init_training_metrics_db
+from .db.products import init_products_db
+from .db.personal import init_personal_db
+from .db.conversations import init_conversations_db
 from .models.model_manager import load_model
 from .core.rate_limit import RateLimiter
 from .core.logging import configure_logging, get_logger, request_id_var
@@ -32,6 +39,9 @@ async def lifespan(app: FastAPI):
     init_feedback_db()
     init_user_db()
     init_training_metrics_db()
+    init_products_db()
+    init_personal_db()
+    init_conversations_db()
     load_model()
     logger.info("Startup complete")
     yield
@@ -93,3 +103,7 @@ app.include_router(metrics_router)
 app.include_router(embeddings_router)
 app.include_router(admin_router)
 app.include_router(training_router)
+app.include_router(products_router, prefix="/api/user")
+app.include_router(personal_router, prefix="/api/user")
+app.include_router(chat_router, prefix="/api/user")
+app.include_router(whatsapp_router, prefix="/api")

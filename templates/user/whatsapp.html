@@ -1,0 +1,788 @@
+{% extends "user/user_layout.html" %} {% block title %}WhatsApp - SimpleIA{%
+endblock %} {% block extra_css %}
+<style>
+  .whatsapp-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .page-header p {
+    color: #718096;
+    font-size: 0.95rem;
+  }
+
+  /* Estado de conexión */
+  .connection-status {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+  }
+
+  .status-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  .status-indicator.connected {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .status-indicator.disconnected {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  .status-indicator.connected .status-dot {
+    background: #10b981;
+  }
+
+  .status-indicator.disconnected .status-dot {
+    background: #ef4444;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .qr-section {
+    text-align: center;
+    padding: 2rem;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+
+  .qr-code {
+    width: 250px;
+    height: 250px;
+    margin: 0 auto 1rem;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .qr-placeholder {
+    color: #9ca3af;
+    font-size: 4rem;
+  }
+
+  .qr-instructions {
+    color: #6b7280;
+    font-size: 0.875rem;
+    max-width: 400px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .phone-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+
+  .phone-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #10b981;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  .phone-details h4 {
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 0.25rem;
+  }
+
+  .phone-details p {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+
+  /* Configuración */
+  .config-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+  }
+
+  .config-section h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 1.5rem;
+  }
+
+  .config-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .config-option:last-child {
+    border-bottom: none;
+  }
+
+  .config-label {
+    flex: 1;
+  }
+
+  .config-label h4 {
+    font-weight: 500;
+    color: #1a202c;
+    margin-bottom: 0.25rem;
+  }
+
+  .config-label p {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 52px;
+    height: 28px;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #e5e7eb;
+    transition: 0.4s;
+    border-radius: 28px;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .toggle-slider {
+    background-color: #10b981;
+  }
+
+  input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+  }
+
+  /* Logs de mensajes */
+  .logs-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .logs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .logs-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+  }
+
+  .logs-filters {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .filter-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover {
+    border-color: #10b981;
+    color: #10b981;
+  }
+
+  .filter-btn.active {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+  }
+
+  .logs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .log-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+  }
+
+  .log-item.incoming {
+    border-left-color: #3b82f6;
+  }
+
+  .log-item.outgoing {
+    border-left-color: #10b981;
+  }
+
+  .log-item.error {
+    border-left-color: #ef4444;
+  }
+
+  .log-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .log-item.incoming .log-icon {
+    background: #dbeafe;
+  }
+
+  .log-item.outgoing .log-icon {
+    background: #d1fae5;
+  }
+
+  .log-item.error .log-icon {
+    background: #fee2e2;
+  }
+
+  .log-content {
+    flex: 1;
+  }
+
+  .log-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .log-number {
+    font-weight: 600;
+    color: #1a202c;
+  }
+
+  .log-time {
+    color: #9ca3af;
+    font-size: 0.875rem;
+  }
+
+  .log-message {
+    color: #4b5563;
+    font-size: 0.95rem;
+  }
+
+  /* Botones de acción */
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-primary {
+    background: #10b981;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #059669;
+  }
+
+  .btn-secondary {
+    background: white;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+  }
+
+  .btn-secondary:hover {
+    background: #f9fafb;
+  }
+
+  .btn-danger {
+    background: #ef4444;
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background: #dc2626;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .whatsapp-container {
+      padding: 1rem;
+    }
+
+    .status-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 1rem;
+    }
+
+    .logs-filters {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="whatsapp-container">
+  <!-- Encabezado -->
+  <div class="page-header">
+    <h1>
+      <span style="color: #25d366">💬</span>
+      WhatsApp Integration
+    </h1>
+    <p>Conecta tu WhatsApp para recibir notificaciones y responder mensajes</p>
+  </div>
+
+  <!-- Estado de conexión -->
+  <div class="connection-status">
+    <div class="status-header">
+      <h3 style="margin: 0; font-size: 1.125rem">Estado de Conexión</h3>
+      <div class="status-indicator disconnected" id="connectionStatus">
+        <span class="status-dot"></span>
+        <span id="statusText">Desconectado</span>
+      </div>
+    </div>
+
+    <!-- QR Code (cuando está desconectado) -->
+    <div class="qr-section" id="qrSection">
+      <div class="qr-code">
+        <div class="qr-placeholder">📱</div>
+      </div>
+      <h4 style="margin-bottom: 0.5rem">Escanea el código QR</h4>
+      <div class="qr-instructions">
+        <ol style="text-align: left; padding-left: 1.5rem">
+          <li>Abre WhatsApp en tu teléfono</li>
+          <li>
+            Toca Menú o Configuración y selecciona Dispositivos vinculados
+          </li>
+          <li>Toca en Vincular un dispositivo</li>
+          <li>
+            Apunta tu teléfono hacia esta pantalla para escanear el código
+          </li>
+        </ol>
+      </div>
+      <button
+        class="btn btn-primary"
+        style="margin-top: 1rem"
+        onclick="generateQR()"
+      >
+        🔄 Generar Código QR
+      </button>
+    </div>
+
+    <!-- Información del teléfono conectado (cuando está conectado) -->
+    <div class="phone-info" id="phoneInfo" style="display: none">
+      <div class="phone-avatar">📱</div>
+      <div class="phone-details">
+        <h4 id="phoneNumber">+1 234 567 8900</h4>
+        <p>Conectado desde hace <span id="connectedSince">2 días</span></p>
+      </div>
+      <button
+        class="btn btn-danger"
+        onclick="disconnect()"
+        style="margin-left: auto"
+      >
+        Desconectar
+      </button>
+    </div>
+  </div>
+
+  <!-- Configuración -->
+  <div class="config-section">
+    <h3>⚙️ Configuración</h3>
+
+    <div class="config-option">
+      <div class="config-label">
+        <h4>Notificaciones de Tareas</h4>
+        <p>Recibir recordatorios de tareas próximas por WhatsApp</p>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="taskNotifications" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="config-option">
+      <div class="config-label">
+        <h4>Notificaciones de Citas</h4>
+        <p>Recibir recordatorios de citas agendadas</p>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="appointmentNotifications" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="config-option">
+      <div class="config-label">
+        <h4>Respuestas Automáticas</h4>
+        <p>Permitir que el asistente responda automáticamente mensajes</p>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="autoResponses" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="config-option">
+      <div class="config-label">
+        <h4>Confirmar antes de enviar</h4>
+        <p>Revisar mensajes automáticos antes de enviarlos</p>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="confirmBeforeSend" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div style="margin-top: 1.5rem">
+      <button class="btn btn-primary" onclick="saveSettings()">
+        💾 Guardar Configuración
+      </button>
+    </div>
+  </div>
+
+  <!-- Logs de mensajes -->
+  <div class="logs-section">
+    <div class="logs-header">
+      <h3>📜 Historial de Mensajes</h3>
+      <div class="logs-filters">
+        <button class="filter-btn active" data-filter="all">Todos</button>
+        <button class="filter-btn" data-filter="incoming">Entrantes</button>
+        <button class="filter-btn" data-filter="outgoing">Salientes</button>
+        <button class="filter-btn" data-filter="error">Errores</button>
+      </div>
+    </div>
+
+    <div class="logs-list" id="logsList">
+      <div class="log-item incoming">
+        <div class="log-icon">↓</div>
+        <div class="log-content">
+          <div class="log-header">
+            <span class="log-number">+1 234 567 8900</span>
+            <span class="log-time">Hace 5 min</span>
+          </div>
+          <div class="log-message">¿Tienes productos disponibles?</div>
+        </div>
+      </div>
+
+      <div class="log-item outgoing">
+        <div class="log-icon">↑</div>
+        <div class="log-content">
+          <div class="log-header">
+            <span class="log-number">+1 234 567 8900</span>
+            <span class="log-time">Hace 4 min</span>
+          </div>
+          <div class="log-message">
+            Sí, tenemos varios productos disponibles. ¿Qué estás buscando?
+          </div>
+        </div>
+      </div>
+
+      <div class="log-item incoming">
+        <div class="log-icon">↓</div>
+        <div class="log-content">
+          <div class="log-header">
+            <span class="log-number">+1 987 654 3210</span>
+            <span class="log-time">Hace 1 hora</span>
+          </div>
+          <div class="log-message">
+            Recordatorio: Reunión con cliente mañana a las 10am
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Cargar estado de conexión
+    loadConnectionStatus();
+
+    // Cargar configuración
+    loadSettings();
+
+    // Cargar logs
+    loadLogs();
+
+    // Filtros de logs
+    document.querySelectorAll(".filter-btn").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        document
+          .querySelectorAll(".filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        this.classList.add("active");
+        filterLogs(this.dataset.filter);
+      });
+    });
+
+    // Auto-refresh cada 30 segundos
+    setInterval(loadConnectionStatus, 30000);
+  });
+
+  async function loadConnectionStatus() {
+    try {
+      const response = await fetch("/api/user/whatsapp/status");
+      if (response.ok) {
+        const data = await response.json();
+        updateConnectionUI(
+          data.connected,
+          data.phone_number,
+          data.connected_since
+        );
+      }
+    } catch (error) {
+      console.error("Error cargando estado:", error);
+    }
+  }
+
+  function updateConnectionUI(connected, phoneNumber, connectedSince) {
+    const statusIndicator = document.getElementById("connectionStatus");
+    const statusText = document.getElementById("statusText");
+    const qrSection = document.getElementById("qrSection");
+    const phoneInfo = document.getElementById("phoneInfo");
+
+    if (connected) {
+      statusIndicator.className = "status-indicator connected";
+      statusText.textContent = "Conectado";
+      qrSection.style.display = "none";
+      phoneInfo.style.display = "flex";
+      document.getElementById("phoneNumber").textContent =
+        phoneNumber || "+1 234 567 8900";
+      document.getElementById("connectedSince").textContent =
+        connectedSince || "2 días";
+    } else {
+      statusIndicator.className = "status-indicator disconnected";
+      statusText.textContent = "Desconectado";
+      qrSection.style.display = "block";
+      phoneInfo.style.display = "none";
+    }
+  }
+
+  async function generateQR() {
+    try {
+      const response = await fetch("/api/user/whatsapp/generate-qr", {
+        method: "POST",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Aquí se mostraría el QR real
+        alert("QR generado. Escanéalo con tu WhatsApp.");
+      }
+    } catch (error) {
+      console.error("Error generando QR:", error);
+      alert("Error al generar código QR");
+    }
+  }
+
+  async function disconnect() {
+    if (!confirm("¿Seguro que quieres desconectar WhatsApp?")) return;
+
+    try {
+      const response = await fetch("/api/user/whatsapp/disconnect", {
+        method: "POST",
+      });
+      if (response.ok) {
+        loadConnectionStatus();
+        alert("WhatsApp desconectado exitosamente");
+      }
+    } catch (error) {
+      console.error("Error desconectando:", error);
+      alert("Error al desconectar");
+    }
+  }
+
+  async function loadSettings() {
+    try {
+      const response = await fetch("/api/user/whatsapp/settings");
+      if (response.ok) {
+        const settings = await response.json();
+        document.getElementById("taskNotifications").checked =
+          settings.task_notifications || false;
+        document.getElementById("appointmentNotifications").checked =
+          settings.appointment_notifications || false;
+        document.getElementById("autoResponses").checked =
+          settings.auto_responses || false;
+        document.getElementById("confirmBeforeSend").checked =
+          settings.confirm_before_send || true;
+      }
+    } catch (error) {
+      console.error("Error cargando configuración:", error);
+    }
+  }
+
+  async function saveSettings() {
+    const settings = {
+      task_notifications: document.getElementById("taskNotifications").checked,
+      appointment_notifications: document.getElementById(
+        "appointmentNotifications"
+      ).checked,
+      auto_responses: document.getElementById("autoResponses").checked,
+      confirm_before_send: document.getElementById("confirmBeforeSend").checked,
+    };
+
+    try {
+      const response = await fetch("/api/user/whatsapp/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+
+      if (response.ok) {
+        alert("✅ Configuración guardada exitosamente");
+      }
+    } catch (error) {
+      console.error("Error guardando configuración:", error);
+      alert("Error al guardar configuración");
+    }
+  }
+
+  async function loadLogs() {
+    try {
+      const response = await fetch("/api/user/whatsapp/logs");
+      if (response.ok) {
+        const logs = await response.json();
+        updateLogsUI(logs);
+      }
+    } catch (error) {
+      console.error("Error cargando logs:", error);
+    }
+  }
+
+  function updateLogsUI(logs) {
+    const logsList = document.getElementById("logsList");
+    if (!logs || logs.length === 0) return;
+
+    logsList.innerHTML = logs
+      .map((log) => {
+        const direction = log.direction === "incoming" ? "↓" : "↑";
+        const typeClass = log.type || log.direction;
+
+        return `
+            <div class="log-item ${typeClass}">
+                <div class="log-icon">${direction}</div>
+                <div class="log-content">
+                    <div class="log-header">
+                        <span class="log-number">${log.phone_number}</span>
+                        <span class="log-time">${log.time_ago}</span>
+                    </div>
+                    <div class="log-message">${log.message}</div>
+                </div>
+            </div>
+        `;
+      })
+      .join("");
+  }
+
+  function filterLogs(filter) {
+    const logs = document.querySelectorAll(".log-item");
+    logs.forEach((log) => {
+      if (filter === "all" || log.classList.contains(filter)) {
+        log.style.display = "flex";
+      } else {
+        log.style.display = "none";
+      }
+    });
+  }
+</script>
+{% endblock %}

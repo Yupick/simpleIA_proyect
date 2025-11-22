@@ -69,14 +69,13 @@ endblock %} {% block content %}
         <div class="col-md-6">
           <div class="form-group">
             <label class="form-label">Modelo</label>
-            <input
-              type="text"
-              id="newModel"
-              class="form-control"
-              placeholder="Ej: gpt2, gpt-3.5-turbo, claude-3-sonnet..."
-              required
-            />
-            <small id="modelHint" style="color: #657786"></small>
+            <select id="newModel" class="form-control" required>
+              <option value="">Primero selecciona un provider...</option>
+            </select>
+            <small
+              id="modelHint"
+              style="color: #657786; display: block; margin-top: 5px"
+            ></small>
           </div>
         </div>
       </div>
@@ -246,14 +245,6 @@ endblock %} {% block content %}
 
 {% endblock %} {% block extra_js %}
 <script>
-  const modelSuggestions = {
-    huggingface:
-      "Ejemplos: gpt2, gpt2-medium, distilgpt2, flax-community/gpt-2-spanish",
-    claude:
-      "Ejemplos: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307",
-    openai: "Ejemplos: gpt-4, gpt-4-turbo-preview, gpt-3.5-turbo",
-  };
-
   function showToast(message, type = "success") {
     const toast = document.getElementById("toast");
     toast.textContent = message;
@@ -264,7 +255,7 @@ endblock %} {% block content %}
 
   async function loadProviders() {
     try {
-      const response = await fetch("/api/admin/providers/current", {
+      const response = await fetch("/admin/providers/current", {
         credentials: "include",
       });
 
@@ -272,10 +263,13 @@ endblock %} {% block content %}
         const errorData = await response.json().catch(() => ({}));
         const errorMsg =
           errorData.error || errorData.detail || `Error ${response.status}`;
+        console.error("Error loading current provider:", errorData);
         throw new Error(errorMsg);
       }
 
       const data = await response.json();
+      console.log("Current provider data:", data);
+
       document.getElementById("currentProvider").textContent =
         data.provider || "No configurado";
       document.getElementById("currentModel").textContent =
@@ -285,20 +279,16 @@ endblock %} {% block content %}
       window.savedKeys = data.saved_keys || {};
     } catch (error) {
       console.error("Error completo:", error);
-      document.getElementById("currentProvider").textContent = "Error";
-      document.getElementById("currentModel").textContent = "Error";
-      showToast("Error al cargar providers: " + error.message, "error");
+      document.getElementById("currentProvider").textContent =
+        "Error: " + error.message;
+      document.getElementById("currentModel").textContent =
+        "Error: " + error.message;
+      showToast("Error al cargar provider actual: " + error.message, "error");
     }
   }
 
-  function updateModelSuggestions() {
-    const provider = document.getElementById("newProvider").value;
-    const hint = document.getElementById("modelHint");
-    hint.textContent = modelSuggestions[provider] || "";
-  }
-
   // Actualizar campos según provider seleccionado
-  function updateProviderFields() {
+  async function updateProviderFields() {
     const provider = document.getElementById("newProvider").value;
     const apiKeyFields = document.getElementById("apiKeyFields");
     const claudeFields = document.getElementById("claudeFields");
@@ -306,62 +296,167 @@ endblock %} {% block content %}
     const apiKeyLabel = document.getElementById("apiKeyLabel");
     const apiKeyLink = document.getElementById("apiKeyLink");
     const apiKeyInput = document.getElementById("apiKey");
-
-    // Actualizar sugerencias de modelos
-    updateModelSuggestions();
+    const modelSelect = document.getElementById("newModel");
+    const modelHint = document.getElementById("modelHint");
 
     // Resetear todos los campos
     claudeFields.style.display = "none";
     openaiFields.style.display = "none";
     apiKeyInput.removeAttribute("required");
+    modelSelect.innerHTML = '<option value="">Cargando modelos...</option>';
+    modelHint.textContent = "";
 
-    if (provider === "huggingface") {
-      // HuggingFace no requiere API key (modelos gratuitos)
+    if (!provider) {
+      modelSelect.innerHTML =
+        '<option value="">Primero selecciona un provider...</option>';
       apiKeyFields.style.display = "none";
-    } else if (provider === "claude") {
-      // Claude requiere ANTHROPIC_API_KEY
-      apiKeyFields.style.display = "block";
-      claudeFields.style.display = "block";
-      apiKeyLabel.textContent = "Anthropic API Key";
-      apiKeyLink.href = "https://console.anthropic.com/account/keys";
-      apiKeyInput.placeholder = "sk-ant-...";
+      return;
+    }
 
-      // Pre-llenar con valores guardados
-      if (window.savedKeys) {
-        apiKeyInput.value = window.savedKeys.anthropic_api_key || "";
-        document.getElementById("apiVersion").value =
-          window.savedKeys.api_version || "2023-06-01";
-        document.getElementById("maxTokens").value =
-          window.savedKeys.max_tokens || 4096;
+    // Cargar modelos disponibles para el provider seleccionado
+    try {
+      const response = await fetch(
+        `/admin/providers/models?provider=${provider}`,
+        {
+          credentials: "include",
+        }
+      );
 
-        // Solo requerir si no hay key guardada
-        if (!window.savedKeys.anthropic_api_key) {
-          apiKeyInput.setAttribute("required", "required");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg =
+          errorData.detail || errorData.error || `HTTP ${response.status}`;
+        console.error("Error response:", errorData);
+        throw new Error(errorMsg);
+      }
+
+      const data = await response.json();
+      console.log("Models data received:", data);
+      const models = data.models;
+
+      // Validar que models existe
+      if (!models) {
+        throw new Error("La respuesta no contiene modelos");
+      }
+
+      // Poblar dropdown de modelos
+      modelSelect.innerHTML =
+        '<option value="">Selecciona un modelo...</option>';
+
+      if (provider === "huggingface") {
+        // Modelos HuggingFace por categoría
+        if (models.spanish && models.spanish.length > 0) {
+          const optgroup = document.createElement("optgroup");
+          optgroup.label = "🇪🇸 Español";
+          models.spanish.forEach((model) => {
+            const option = document.createElement("option");
+            option.value = model.id;
+            option.textContent = `${model.name} (${model.size})`;
+            optgroup.appendChild(option);
+          });
+          modelSelect.appendChild(optgroup);
+        }
+
+        if (models.english && models.english.length > 0) {
+          const optgroup = document.createElement("optgroup");
+          optgroup.label = "🇬🇧 English";
+          models.english.forEach((model) => {
+            const option = document.createElement("option");
+            option.value = model.id;
+            option.textContent = `${model.name} (${model.size})`;
+            optgroup.appendChild(option);
+          });
+          modelSelect.appendChild(optgroup);
+        }
+
+        if (models.multilingual && models.multilingual.length > 0) {
+          const optgroup = document.createElement("optgroup");
+          optgroup.label = "🌍 Multilingüe";
+          models.multilingual.forEach((model) => {
+            const option = document.createElement("option");
+            option.value = model.id;
+            option.textContent = `${model.name} (${model.size})`;
+            optgroup.appendChild(option);
+          });
+          modelSelect.appendChild(optgroup);
+        }
+
+        if (models.local && models.local.length > 0) {
+          const optgroup = document.createElement("optgroup");
+          optgroup.label = "🎓 Modelos Entrenados Localmente";
+          models.local.forEach((model) => {
+            const option = document.createElement("option");
+            option.value = model.id;
+            option.textContent = model.name;
+            optgroup.appendChild(option);
+          });
+          modelSelect.appendChild(optgroup);
+        }
+
+        modelHint.textContent =
+          "Modelos gratuitos y open-source. Se descargan y ejecutan localmente. No requieren API key.";
+        apiKeyFields.style.display = "none";
+      } else {
+        // Claude u OpenAI - lista simple
+        if (!Array.isArray(models)) {
+          console.error("Models no es un array:", models);
+          throw new Error("Formato de modelos inválido");
+        }
+
+        models.forEach((model) => {
+          const option = document.createElement("option");
+          option.value = model.id;
+          option.textContent = `${model.name} (${model.cost || "N/A"})`;
+          modelSelect.appendChild(option);
+        });
+
+        if (provider === "claude") {
+          apiKeyFields.style.display = "block";
+          claudeFields.style.display = "block";
+          apiKeyLabel.textContent = "Anthropic API Key";
+          apiKeyLink.href = "https://console.anthropic.com/account/keys";
+          apiKeyInput.placeholder = "sk-ant-...";
+          modelHint.textContent =
+            "Requiere API key de Anthropic. Se ejecuta en la nube. Costo por tokens.";
+
+          // Pre-llenar
+          if (window.savedKeys) {
+            apiKeyInput.value = window.savedKeys.anthropic_api_key || "";
+            document.getElementById("apiVersion").value =
+              window.savedKeys.api_version || "2023-06-01";
+            document.getElementById("maxTokens").value =
+              window.savedKeys.max_tokens || 4096;
+            if (!window.savedKeys.anthropic_api_key) {
+              apiKeyInput.setAttribute("required", "required");
+            }
+          }
+        } else if (provider === "openai") {
+          apiKeyFields.style.display = "block";
+          openaiFields.style.display = "block";
+          apiKeyLabel.textContent = "OpenAI API Key";
+          apiKeyLink.href = "https://platform.openai.com/api-keys";
+          apiKeyInput.placeholder = "sk-...";
+          modelHint.textContent =
+            "Requiere API key de OpenAI. Se ejecuta en la nube. Costo por tokens.";
+
+          // Pre-llenar
+          if (window.savedKeys) {
+            apiKeyInput.value = window.savedKeys.openai_api_key || "";
+            document.getElementById("orgId").value =
+              window.savedKeys.organization_id || "";
+            document.getElementById("baseUrl").value =
+              window.savedKeys.base_url || "";
+            if (!window.savedKeys.openai_api_key) {
+              apiKeyInput.setAttribute("required", "required");
+            }
+          }
         }
       }
-    } else if (provider === "openai") {
-      // OpenAI requiere OPENAI_API_KEY
-      apiKeyFields.style.display = "block";
-      openaiFields.style.display = "block";
-      apiKeyLabel.textContent = "OpenAI API Key";
-      apiKeyLink.href = "https://platform.openai.com/api-keys";
-      apiKeyInput.placeholder = "sk-...";
-
-      // Pre-llenar con valores guardados
-      if (window.savedKeys) {
-        apiKeyInput.value = window.savedKeys.openai_api_key || "";
-        document.getElementById("orgId").value =
-          window.savedKeys.organization_id || "";
-        document.getElementById("baseUrl").value =
-          window.savedKeys.base_url || "";
-
-        // Solo requerir si no hay key guardada
-        if (!window.savedKeys.openai_api_key) {
-          apiKeyInput.setAttribute("required", "required");
-        }
-      }
-    } else {
-      apiKeyFields.style.display = "none";
+    } catch (error) {
+      console.error("Error cargando modelos:", error);
+      modelSelect.innerHTML =
+        '<option value="">Error al cargar modelos</option>';
+      showToast("Error al cargar lista de modelos", "error");
     }
   }
 
@@ -422,7 +517,7 @@ endblock %} {% block content %}
     }
 
     try {
-      const response = await fetch("/api/admin/providers/switch", {
+      const response = await fetch("/admin/providers/switch", {
         method: "POST",
         credentials: "include",
         headers: {

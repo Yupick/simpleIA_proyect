@@ -1,0 +1,650 @@
+{% extends "user/user_layout.html" %} {% block title %}Mis Métricas - SimpleIA{%
+endblock %} {% block extra_css %}
+<style>
+  .analytics-container {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-header p {
+    color: #718096;
+    font-size: 0.95rem;
+  }
+
+  /* Tarjetas de métricas */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .metric-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .metric-card.tasks {
+    border-left-color: #3b82f6;
+  }
+  .metric-card.appointments {
+    border-left-color: #10b981;
+  }
+  .metric-card.products {
+    border-left-color: #f59e0b;
+  }
+  .metric-card.conversations {
+    border-left-color: #8b5cf6;
+  }
+
+  .metric-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+
+  .metric-card.tasks .metric-icon {
+    background: #dbeafe;
+  }
+  .metric-card.appointments .metric-icon {
+    background: #d1fae5;
+  }
+  .metric-card.products .metric-icon {
+    background: #fed7aa;
+  }
+  .metric-card.conversations .metric-icon {
+    background: #ddd6fe;
+  }
+
+  .metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1a202c;
+    line-height: 1;
+  }
+
+  .metric-label {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    font-weight: 500;
+  }
+
+  .metric-trend {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .trend-up {
+    color: #10b981;
+  }
+
+  .trend-down {
+    color: #ef4444;
+  }
+
+  /* Gráficos */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .chart-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .chart-card h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .chart-placeholder {
+    height: 300px;
+    background: #f9fafb;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 0.875rem;
+  }
+
+  /* Tabla de actividad reciente */
+  .activity-section {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .activity-section h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 1.5rem;
+  }
+
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    transition: background 0.2s;
+  }
+
+  .activity-item:hover {
+    background: #f3f4f6;
+  }
+
+  .activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .activity-icon.task {
+    background: #dbeafe;
+    color: #3b82f6;
+  }
+  .activity-icon.appointment {
+    background: #d1fae5;
+    color: #10b981;
+  }
+  .activity-icon.product {
+    background: #fed7aa;
+    color: #f59e0b;
+  }
+  .activity-icon.chat {
+    background: #ddd6fe;
+    color: #8b5cf6;
+  }
+
+  .activity-content {
+    flex: 1;
+  }
+
+  .activity-title {
+    font-weight: 500;
+    color: #1a202c;
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .activity-time {
+    color: #9ca3af;
+    font-size: 0.875rem;
+  }
+
+  /* Filtros de período */
+  .period-filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .period-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+  }
+
+  .period-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+
+  .period-btn.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+
+  /* Progreso circular */
+  .progress-circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+  }
+
+  .progress-ring {
+    transform: rotate(-90deg);
+  }
+
+  .progress-ring-circle {
+    stroke-dasharray: 339.292;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 0.5s;
+  }
+
+  .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a202c;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .analytics-container {
+      padding: 1rem;
+    }
+
+    .metrics-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .charts-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .period-filters {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .period-filters::-webkit-scrollbar {
+      display: none;
+    }
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="analytics-container">
+  <!-- Encabezado -->
+  <div class="page-header">
+    <h1>📊 Mis Métricas</h1>
+    <p>Visualiza tu productividad y actividad</p>
+  </div>
+
+  <!-- Filtros de período -->
+  <div class="period-filters">
+    <button class="period-btn active" data-period="7">Últimos 7 días</button>
+    <button class="period-btn" data-period="30">Últimos 30 días</button>
+    <button class="period-btn" data-period="90">Últimos 3 meses</button>
+    <button class="period-btn" data-period="365">Último año</button>
+  </div>
+
+  <!-- Tarjetas de métricas principales -->
+  <div class="metrics-grid">
+    <!-- Tareas -->
+    <div class="metric-card tasks">
+      <div class="metric-header">
+        <div class="metric-icon">✓</div>
+      </div>
+      <div class="metric-value" id="tasksCompleted">0</div>
+      <div class="metric-label">Tareas completadas</div>
+      <div class="metric-trend trend-up">
+        <span>↑ 12%</span>
+        <span style="color: #9ca3af">vs. período anterior</span>
+      </div>
+    </div>
+
+    <!-- Citas -->
+    <div class="metric-card appointments">
+      <div class="metric-header">
+        <div class="metric-icon">📅</div>
+      </div>
+      <div class="metric-value" id="appointmentsTotal">0</div>
+      <div class="metric-label">Citas agendadas</div>
+      <div class="metric-trend trend-up">
+        <span>↑ 8%</span>
+        <span style="color: #9ca3af">vs. período anterior</span>
+      </div>
+    </div>
+
+    <!-- Productos -->
+    <div class="metric-card products">
+      <div class="metric-header">
+        <div class="metric-icon">📦</div>
+      </div>
+      <div class="metric-value" id="productsTotal">0</div>
+      <div class="metric-label">Productos activos</div>
+      <div class="metric-trend trend-up">
+        <span>↑ 5%</span>
+        <span style="color: #9ca3af">vs. período anterior</span>
+      </div>
+    </div>
+
+    <!-- Conversaciones -->
+    <div class="metric-card conversations">
+      <div class="metric-header">
+        <div class="metric-icon">💬</div>
+      </div>
+      <div class="metric-value" id="conversationsTotal">0</div>
+      <div class="metric-label">Conversaciones</div>
+      <div class="metric-trend trend-up">
+        <span>↑ 15%</span>
+        <span style="color: #9ca3af">vs. período anterior</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="charts-grid">
+    <!-- Gráfico de tareas por día -->
+    <div class="chart-card">
+      <h3>📈 Actividad de Tareas</h3>
+      <canvas id="tasksChart"></canvas>
+    </div>
+
+    <!-- Gráfico de citas por semana -->
+    <div class="chart-card">
+      <h3>📊 Distribución de Citas</h3>
+      <canvas id="appointmentsChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Gráfico de uso de asistentes -->
+  <div class="chart-card">
+    <h3>🤖 Uso de Asistentes IA</h3>
+    <canvas id="assistantsChart"></canvas>
+  </div>
+
+  <!-- Actividad reciente -->
+  <div class="activity-section">
+    <h3>🕐 Actividad Reciente</h3>
+    <div class="activity-list" id="activityList">
+      <div class="activity-item">
+        <div class="activity-icon task">✓</div>
+        <div class="activity-content">
+          <div class="activity-title">Tarea completada: Revisar código</div>
+          <div class="activity-time">Hace 2 horas</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon appointment">📅</div>
+        <div class="activity-content">
+          <div class="activity-title">Cita agendada: Reunión con cliente</div>
+          <div class="activity-time">Hace 4 horas</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon product">📦</div>
+        <div class="activity-content">
+          <div class="activity-title">Producto agregado: Laptop Gaming</div>
+          <div class="activity-time">Hace 5 horas</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-icon chat">💬</div>
+        <div class="activity-content">
+          <div class="activity-title">Conversación con Asistente Personal</div>
+          <div class="activity-time">Hace 1 día</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<!-- Chart.js para los gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    let currentPeriod = 7;
+
+    // Cargar datos iniciales
+    loadAnalytics(currentPeriod);
+
+    // Filtros de período
+    document.querySelectorAll(".period-btn").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        document
+          .querySelectorAll(".period-btn")
+          .forEach((b) => b.classList.remove("active"));
+        this.classList.add("active");
+        currentPeriod = parseInt(this.dataset.period);
+        loadAnalytics(currentPeriod);
+      });
+    });
+
+    // Función para cargar analytics
+    async function loadAnalytics(days) {
+      try {
+        const response = await fetch(`/api/user/analytics?days=${days}`);
+        if (response.ok) {
+          const data = await response.json();
+          updateMetrics(data);
+          updateCharts(data);
+          updateActivityList(data.recent_activity || []);
+        }
+      } catch (error) {
+        console.error("Error cargando analytics:", error);
+      }
+    }
+
+    // Actualizar métricas
+    function updateMetrics(data) {
+      document.getElementById("tasksCompleted").textContent =
+        data.tasks_completed || 0;
+      document.getElementById("appointmentsTotal").textContent =
+        data.appointments_total || 0;
+      document.getElementById("productsTotal").textContent =
+        data.products_total || 0;
+      document.getElementById("conversationsTotal").textContent =
+        data.conversations_total || 0;
+    }
+
+    // Actualizar lista de actividad
+    function updateActivityList(activities) {
+      const activityList = document.getElementById("activityList");
+      if (activities.length === 0) return;
+
+      activityList.innerHTML = activities
+        .map((activity) => {
+          const iconClass =
+            activity.type === "task"
+              ? "task"
+              : activity.type === "appointment"
+              ? "appointment"
+              : activity.type === "product"
+              ? "product"
+              : "chat";
+
+          const icon =
+            activity.type === "task"
+              ? "✓"
+              : activity.type === "appointment"
+              ? "📅"
+              : activity.type === "product"
+              ? "📦"
+              : "💬";
+
+          return `
+                <div class="activity-item">
+                    <div class="activity-icon ${iconClass}">${icon}</div>
+                    <div class="activity-content">
+                        <div class="activity-title">${activity.title}</div>
+                        <div class="activity-time">${activity.time_ago}</div>
+                    </div>
+                </div>
+            `;
+        })
+        .join("");
+    }
+
+    // Crear gráficos
+    const tasksChart = new Chart(document.getElementById("tasksChart"), {
+      type: "line",
+      data: {
+        labels: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+        datasets: [
+          {
+            label: "Tareas Completadas",
+            data: [3, 5, 2, 8, 4, 1, 2],
+            borderColor: "#3b82f6",
+            backgroundColor: "rgba(59, 130, 246, 0.1)",
+            tension: 0.4,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 2,
+            },
+          },
+        },
+      },
+    });
+
+    const appointmentsChart = new Chart(
+      document.getElementById("appointmentsChart"),
+      {
+        type: "bar",
+        data: {
+          labels: ["Semana 1", "Semana 2", "Semana 3", "Semana 4"],
+          datasets: [
+            {
+              label: "Citas",
+              data: [4, 6, 3, 5],
+              backgroundColor: "#10b981",
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 2,
+              },
+            },
+          },
+        },
+      }
+    );
+
+    const assistantsChart = new Chart(
+      document.getElementById("assistantsChart"),
+      {
+        type: "doughnut",
+        data: {
+          labels: ["Asistente Personal", "Asistente Comercial"],
+          datasets: [
+            {
+              data: [65, 35],
+              backgroundColor: ["#8b5cf6", "#f59e0b"],
+              borderWidth: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "bottom",
+            },
+          },
+        },
+      }
+    );
+
+    // Función para actualizar gráficos con datos reales
+    function updateCharts(data) {
+      if (data.tasks_by_day) {
+        tasksChart.data.labels = data.tasks_by_day.labels;
+        tasksChart.data.datasets[0].data = data.tasks_by_day.values;
+        tasksChart.update();
+      }
+
+      if (data.appointments_by_week) {
+        appointmentsChart.data.labels = data.appointments_by_week.labels;
+        appointmentsChart.data.datasets[0].data =
+          data.appointments_by_week.values;
+        appointmentsChart.update();
+      }
+
+      if (data.assistant_usage) {
+        assistantsChart.data.datasets[0].data = [
+          data.assistant_usage.personal,
+          data.assistant_usage.commercial,
+        ];
+        assistantsChart.update();
+      }
+    }
+  });
+</script>
+{% endblock %}

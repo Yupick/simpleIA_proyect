@@ -1,6 +1,0 @@
-Usuario: Hola, ¿quién eres?
-Asistente: Soy un modelo de lenguaje local listo para ayudarte.
-Usuario: ¿Puedes responder en español?
-Asistente: Sí, respondo en español sin problema.
-Usuario: Dame un consejo corto de productividad.
-Asistente: Divide tus tareas grandes en pasos breves y medibles.

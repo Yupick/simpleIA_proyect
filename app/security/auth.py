@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 import jwt
 from passlib.context import CryptContext
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request, Cookie
 from jwt import PyJWTError
 from ..db.sqlite import get_user
 from dotenv import load_dotenv
@@ -64,22 +64,79 @@ def get_current_user(authorization: str = Header(..., alias="Authorization")) ->
     except (ValueError, PyJWTError) as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
 
-def get_current_admin_user(authorization: str = Header(..., alias="Authorization")) -> dict:
+def get_current_admin_user(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+    access_token: Optional[str] = Cookie(None)
+) -> dict:
     """
     Dependencia para rutas que requieren permisos de administrador.
+    Acepta token desde header Authorization o desde cookie access_token.
     Lanza HTTPException 403 si el usuario no es admin.
     """
+    token = None
+    
+    # Intentar obtener token del header primero
+    if authorization:
+        try:
+            scheme, token = authorization.split()
+            if scheme.lower() != "bearer":
+                token = None
+        except ValueError:
+            token = None
+    
+    # Si no hay token en header, intentar desde cookie
+    if not token and access_token:
+        token = access_token
+    
+    if not token:
+        raise HTTPException(
+            status_code=401, 
+            detail="No se encontró token de autenticación. Por favor inicie sesión."
+        )
+    
+    # Validar el token
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=401, detail="Token inválido")
+        
+        user = get_user(username)
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+        
+        if not user.get("is_admin", False):
+            raise HTTPException(
+                status_code=403, 
+                detail="Se requieren permisos de administrador"
+            )
+        
+        return user
+    except PyJWTError as e:
+        raise HTTPException(status_code=401, detail=f"Token inválido: {str(e)}")
+
+def get_current_superadmin(authorization: str = Header(..., alias="Authorization")) -> dict:
+    """
+    Dependencia SOLO para super administradores del sistema.
+    Lanza HTTPException 403 si el usuario no tiene role='superadmin'.
+    """
     user = get_current_user(authorization)
-    if not user.get("is_admin", False):
-        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    if user.get("role") != "superadmin":
+        raise HTTPException(
+            status_code=403, 
+            detail="Acceso denegado. Se requieren privilegios de super administrador."
+        )
     return user
 
-def get_current_admin_user(authorization: str = Header(..., alias="Authorization")) -> dict:
+def get_current_regular_user(authorization: str = Header(..., alias="Authorization")) -> dict:
     """
-    Dependencia para rutas que requieren permisos de administrador.
-    Lanza HTTPException 403 si el usuario no es admin.
+    Dependencia SOLO para usuarios regulares (no super admins).
+    Los super admins no pueden acceder a dashboards de usuario regular.
     """
     user = get_current_user(authorization)
-    if not user.get("is_admin", False):
-        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
+    if user.get("role") == "superadmin":
+        raise HTTPException(
+            status_code=403,
+            detail="Los administradores del sistema no pueden acceder a paneles de usuario."
+        )
     return user

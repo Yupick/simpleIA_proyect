@@ -1,5 +1,0 @@
-El agua hierve a 100 grados Celsius al nivel del mar.
-La capital de Argentina es Buenos Aires.
-Python es un lenguaje de programación de alto nivel.
-FastAPI permite crear APIs rápidas usando Python.
-Los modelos de lenguaje pueden ajustarse con fine tuning sobre datos específicos.

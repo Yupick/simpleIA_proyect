@@ -1,0 +1,143 @@
+{% extends "user/user_layout.html" %} {% block title %}Mi Dashboard - SimpleIA{%
+endblock %} {% block content %}
+<div class="user-card">
+  <div class="user-card-header">
+    <h1 class="user-card-title">¡Bienvenido, {{ user.username }}! 👋</h1>
+  </div>
+
+  <p style="color: #a0a0a0; margin-bottom: 2rem">
+    Este es tu panel personal donde puedes gestionar tus productos, agenda,
+    tareas y conversar con tus asistentes de IA.
+  </p>
+
+  <!-- Estadísticas rápidas -->
+  <div class="user-stats">
+    <div class="user-stat-card">
+      <div class="user-stat-label">📦 Mis Productos</div>
+      <div class="user-stat-value" id="stat-products">0</div>
+    </div>
+
+    <div class="user-stat-card">
+      <div class="user-stat-label">📅 Próximas Citas</div>
+      <div class="user-stat-value" id="stat-appointments">0</div>
+    </div>
+
+    <div class="user-stat-card">
+      <div class="user-stat-label">✅ Tareas Pendientes</div>
+      <div class="user-stat-value" id="stat-tasks">0</div>
+    </div>
+
+    <div class="user-stat-card">
+      <div class="user-stat-label">💬 Conversaciones</div>
+      <div class="user-stat-value" id="stat-conversations">0</div>
+    </div>
+  </div>
+</div>
+
+<!-- Sección Comercial -->
+<div class="user-card">
+  <div class="user-card-header">
+    <h2 class="user-card-title">💼 Gestión Comercial</h2>
+  </div>
+
+  <p style="color: #a0a0a0; margin-bottom: 1.5rem">
+    Administra tu catálogo de productos y atiende a tus clientes vía WhatsApp.
+  </p>
+
+  <div class="quick-actions">
+    <a href="/user/commercial/products" class="quick-action-btn btn-commercial">
+      📦 Mis Productos
+    </a>
+    <a href="/user/commercial/whatsapp" class="quick-action-btn btn-commercial">
+      💬 WhatsApp
+    </a>
+    <a
+      href="/user/commercial/analytics"
+      class="quick-action-btn btn-commercial"
+    >
+      📊 Mis Métricas
+    </a>
+  </div>
+</div>
+
+<!-- Sección Personal -->
+<div class="user-card">
+  <div class="user-card-header">
+    <h2 class="user-card-title">📅 Productividad Personal</h2>
+  </div>
+
+  <p style="color: #a0a0a0; margin-bottom: 1.5rem">
+    Organiza tu tiempo con agenda, tareas y recordatorios inteligentes.
+  </p>
+
+  <div class="quick-actions">
+    <a href="/user/personal/calendar" class="quick-action-btn btn-personal">
+      📅 Mi Agenda
+    </a>
+    <a href="/user/personal/tasks" class="quick-action-btn btn-personal">
+      ✅ Mis Tareas
+    </a>
+    <a href="/user/personal/reminders" class="quick-action-btn btn-personal">
+      🔔 Recordatorios
+    </a>
+  </div>
+</div>
+
+<!-- Sección Chat con Asistentes -->
+<div class="user-card">
+  <div class="user-card-header">
+    <h2 class="user-card-title">🤖 Asistentes de IA</h2>
+  </div>
+
+  <p style="color: #a0a0a0; margin-bottom: 1.5rem">
+    Conversa con tus asistentes especializados para obtener ayuda instantánea.
+  </p>
+
+  <div class="quick-actions">
+    <a href="/user/chat?assistant=general" class="quick-action-btn btn-chat">
+      💬 Asistente General
+    </a>
+    <a href="/user/chat?assistant=commercial" class="quick-action-btn btn-chat">
+      🤖 Asistente Comercial
+    </a>
+    <a href="/user/chat?assistant=personal" class="quick-action-btn btn-chat">
+      📝 Asistente Personal
+    </a>
+  </div>
+</div>
+
+<!-- Actividad Reciente -->
+<div class="user-card">
+  <div class="user-card-header">
+    <h2 class="user-card-title">📋 Actividad Reciente</h2>
+  </div>
+
+  <div id="recent-activity" style="color: #a0a0a0">
+    Cargando actividad reciente...
+  </div>
+</div>
+
+{% endblock %} {% block extra_js %}
+<script>
+  // Cargar estadísticas del usuario
+  async function loadUserStats() {
+    try {
+      // TODO: Implementar endpoints de estadísticas
+      // Por ahora valores de ejemplo
+      document.getElementById("stat-products").textContent = "-";
+      document.getElementById("stat-appointments").textContent = "-";
+      document.getElementById("stat-tasks").textContent = "-";
+      document.getElementById("stat-conversations").textContent = "-";
+
+      // Actividad reciente
+      document.getElementById("recent-activity").innerHTML =
+        '<p style="color: #666;">No hay actividad reciente. ¡Comienza agregando productos o creando citas!</p>';
+    } catch (error) {
+      console.error("Error loading stats:", error);
+    }
+  }
+
+  // Cargar al iniciar página
+  document.addEventListener("DOMContentLoaded", loadUserStats);
+</script>
+{% endblock %}

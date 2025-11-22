@@ -244,7 +244,7 @@ class LLMTrainer:
         Returns:
             Diccionario con modelos por categoría
         """
-        return {
+        models = {
             "english": [
                 {
                     "name": "gpt2",
@@ -277,6 +277,16 @@ class LLMTrainer:
                     "name": "flax-community/gpt-2-spanish",
                     "description": "GPT-2 Spanish - Comunidad Flax",
                     "size": "124M"
+                },
+                {
+                    "name": "DeepESP/gpt2-spanish",
+                    "description": "GPT-2 Spanish (DeepESP) - Excelente para español",
+                    "size": "124M"
+                },
+                {
+                    "name": "PlanTL-GOB-ES/gpt2-base-bne",
+                    "description": "GPT-2 BNE (Gobierno ES) - Corpus español formal",
+                    "size": "124M"
                 }
             ],
             "multilingual": [
@@ -284,6 +294,31 @@ class LLMTrainer:
                     "name": "bigscience/bloom-560m",
                     "description": "BLOOM 560M - Multilingüe, 46 idiomas",
                     "size": "560M"
+                },
+                {
+                    "name": "bigscience/bloomz-560m",
+                    "description": "BLOOMZ 560M - BLOOM fine-tuned con instrucciones",
+                    "size": "560M"
                 }
             ]
         }
+        
+        # Agregar modelos entrenados localmente
+        from pathlib import Path
+        BASE_DIR = Path(__file__).resolve().parent.parent.parent
+        model_dir = BASE_DIR / "model_llm"
+        
+        if model_dir.exists():
+            local_models = []
+            for model_path in model_dir.iterdir():
+                if model_path.is_dir() and (model_path / "config.json").exists():
+                    local_models.append({
+                        "name": str(model_path.relative_to(BASE_DIR)),
+                        "description": f"🎓 Modelo entrenado localmente - {model_path.name}",
+                        "size": "Local"
+                    })
+            
+            if local_models:
+                models["local"] = local_models
+        
+        return models

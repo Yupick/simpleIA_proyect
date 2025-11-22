@@ -53,9 +53,19 @@ def load_model(force: bool = False):
         try:
             if provider == "hf":
                 logger.info(f"[HF] Loading model: {model_name} on {device}")
-                _tokenizer = AutoTokenizer.from_pretrained(model_name, clean_up_tokenization_spaces=True)
-                _model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
-                _provider_instance = None
+                # Usar model_path si está disponible en config
+                model_path = api_keys_config.get("model_path")
+                if model_path and os.path.exists(model_path):
+                    logger.info(f"[HF] Loading from local path: {model_path}")
+                    model_to_load = model_path
+                else:
+                    model_to_load = model_name
+                
+                _tokenizer = AutoTokenizer.from_pretrained(model_to_load, clean_up_tokenization_spaces=True)
+                _model = AutoModelForCausalLM.from_pretrained(model_to_load).to(device)
+                
+                # Crear instancia de HuggingFaceProvider para compatibilidad
+                _provider_instance = HuggingFaceProvider(model_name=model_to_load, model=_model, tokenizer=_tokenizer)
             elif provider == "claude":
                 api_key = api_keys_config.get("anthropic_api_key") or os.getenv("ANTHROPIC_API_KEY")
                 if not api_key:
@@ -99,11 +109,11 @@ def load_model(force: bool = False):
             _current_model_name = None
             return None
 
-def generate(prompt: str, max_length: int = 50, num_return_sequences: int = 1, temperature: float = 0.7) -> str:
+async def generate(prompt: str, max_length: int = 50, num_return_sequences: int = 1, temperature: float = 0.7) -> str:
     # If using external provider (Claude, OpenAI), delegate to provider
     if _provider_instance is not None:
         try:
-            return _provider_instance.generate(prompt, max_length, num_return_sequences, temperature)
+            return await _provider_instance.generate(prompt, max_length, num_return_sequences, temperature)
         except Exception as e:
             logger.error(f"Provider inference error: {e}")
             return f"[ERROR] Provider inference failed: {e}"
