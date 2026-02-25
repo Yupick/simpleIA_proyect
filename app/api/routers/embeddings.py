@@ -3,7 +3,7 @@ Router para embeddings y búsqueda semántica.
 """
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 from ...models.embeddings import get_embedding_store
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/embed", tags=["embeddings"])
 
 
 class EmbedRequest(BaseModel):
-    texts: List[str]
+    texts: List[str] = Field(..., min_items=1)
 
 
 class EmbedResponse(BaseModel):
@@ -25,7 +25,7 @@ class AddDocumentsRequest(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
-    top_k: int = 5
+    k: int = 5
 
 
 class SearchResult(BaseModel):
@@ -54,10 +54,7 @@ async def add_documents(req: AddDocumentsRequest):
     store = get_embedding_store()
     try:
         store.add_documents(req.documents)
-        return {
-            "message": f"Added {len(req.documents)} documents",
-            "total_documents": len(store.documents),
-        }
+        return {"status": "success", "count": len(req.documents)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error adding documents: {e}")
 
@@ -67,10 +64,19 @@ async def search_documents(req: SearchRequest):
     """Busca documentos similares usando búsqueda semántica."""
     store = get_embedding_store()
     try:
-        results = store.search(req.query, req.top_k)
-        return SearchResponse(
-            results=[SearchResult(document=doc, distance=dist) for doc, dist in results]
-        )
+        results = store.search(req.query, req.k)
+        formatted = []
+        for item in results:
+            if isinstance(item, dict):
+                formatted.append(
+                    SearchResult(
+                        document=item.get("document"), distance=item.get("distance")
+                    )
+                )
+            else:
+                # tuple (doc, dist)
+                formatted.append(SearchResult(document=item[0], distance=item[1]))
+        return SearchResponse(results=formatted)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error searching: {e}")
 
@@ -111,7 +117,7 @@ async def get_stats():
     store = get_embedding_store()
     return {
         "model_name": store.model_name,
-        "dimension": store.dimension,
+        "embedding_dimension": store.dimension,
         "total_documents": len(store.documents),
         "has_index": store.index is not None,
     }
