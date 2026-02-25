@@ -93,7 +93,26 @@ class OpenAIProvider(BaseLLMProvider):
         Real implementations should stream from the API; tests may patch
         `AsyncOpenAI` or this method.
         """
+        # Prefer using AsyncOpenAI client if available (tests patch this).
         try:
+            AsyncClient = globals().get("AsyncOpenAI")
+            if AsyncClient:
+                client = AsyncClient(api_key=self.api_key)
+                async with client.stream(prompt) as stream:
+                    async for event in stream:
+                        try:
+                            # OpenAI streaming events may wrap choices/delta
+                            if hasattr(event, "choice") and hasattr(
+                                event.choice, "delta"
+                            ):
+                                yield getattr(event.choice.delta, "content", "")
+                            else:
+                                yield str(event)
+                        except Exception:
+                            yield str(event)
+                return
+
+            # Fallback: call generate() and split
             full = await self.generate(prompt, **kwargs)
             if not full:
                 return

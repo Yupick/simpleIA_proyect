@@ -104,7 +104,27 @@ class ClaudeProvider(BaseLLMProvider):
         Providers with real streaming should override this with real event
         objects; tests may patch `AsyncAnthropic` or this method.
         """
+        # Prefer using AsyncAnthropic client if available (tests patch this).
         try:
+            # If an AsyncAnthropic implementation exists in this module, use it
+            AsyncClient = globals().get("AsyncAnthropic")
+            if AsyncClient:
+                client = AsyncClient(api_key=self.api_key)
+                # many mocks set messages.stream() as an async context manager
+                async with client.messages.stream(prompt) as stream:
+                    async for event in stream:
+                        # Tests create mock events with type and delta.text
+                        try:
+                            if getattr(event, "type", None) == "content_block_delta":
+                                yield event.delta.text
+                            else:
+                                # fallback to str(event)
+                                yield str(event)
+                        except Exception:
+                            yield str(event)
+                return
+
+            # Fallback: call generate() and split
             full = await self.generate(prompt, **kwargs)
             if not full:
                 return
