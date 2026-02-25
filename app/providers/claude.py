@@ -109,19 +109,41 @@ class ClaudeProvider(BaseLLMProvider):
             # If an AsyncAnthropic implementation exists in this module, use it
             AsyncClient = globals().get("AsyncAnthropic")
             if AsyncClient:
+                import inspect
+
                 client = AsyncClient(api_key=self.api_key)
-                # many mocks set messages.stream() as an async context manager
-                async with client.messages.stream(prompt) as stream:
-                    async for event in stream:
-                        # Tests create mock events with type and delta.text
+                stream_candidate = client.messages.stream(prompt)
+
+                # Some mocks return an awaitable that yields an async context manager
+                if inspect.isawaitable(stream_candidate):
+                    stream_candidate = await stream_candidate
+
+                if hasattr(stream_candidate, "__aenter__"):
+                    async with stream_candidate as stream:
+                        async for event in stream:
+                            try:
+                                if (
+                                    getattr(event, "type", None)
+                                    == "content_block_delta"
+                                ):
+                                    yield event.delta.text
+                                else:
+                                    yield str(event)
+                            except Exception:
+                                yield str(event)
+                    return
+
+                # If it's directly an async iterator
+                if hasattr(stream_candidate, "__aiter__"):
+                    async for event in stream_candidate:
                         try:
                             if getattr(event, "type", None) == "content_block_delta":
                                 yield event.delta.text
                             else:
-                                # fallback to str(event)
                                 yield str(event)
                         except Exception:
                             yield str(event)
+                    return
                 return
 
             # Fallback: call generate() and split

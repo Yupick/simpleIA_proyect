@@ -97,11 +97,31 @@ class OpenAIProvider(BaseLLMProvider):
         try:
             AsyncClient = globals().get("AsyncOpenAI")
             if AsyncClient:
+                import inspect
+
                 client = AsyncClient(api_key=self.api_key)
-                async with client.stream(prompt) as stream:
-                    async for event in stream:
+                stream_candidate = client.stream(prompt)
+
+                if inspect.isawaitable(stream_candidate):
+                    stream_candidate = await stream_candidate
+
+                if hasattr(stream_candidate, "__aenter__"):
+                    async with stream_candidate as stream:
+                        async for event in stream:
+                            try:
+                                if hasattr(event, "choice") and hasattr(
+                                    event.choice, "delta"
+                                ):
+                                    yield getattr(event.choice.delta, "content", "")
+                                else:
+                                    yield str(event)
+                            except Exception:
+                                yield str(event)
+                    return
+
+                if hasattr(stream_candidate, "__aiter__"):
+                    async for event in stream_candidate:
                         try:
-                            # OpenAI streaming events may wrap choices/delta
                             if hasattr(event, "choice") and hasattr(
                                 event.choice, "delta"
                             ):
@@ -110,7 +130,7 @@ class OpenAIProvider(BaseLLMProvider):
                                 yield str(event)
                         except Exception:
                             yield str(event)
-                return
+                    return
 
             # Fallback: call generate() and split
             full = await self.generate(prompt, **kwargs)
