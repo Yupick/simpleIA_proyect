@@ -38,7 +38,26 @@ class LLMCache:
         data = f"{prompt}|{items}"
         return hashlib.sha256(str(data).encode()).hexdigest()
 
-    def get(self, prompt: str, params: dict = None):
+    def get(self, prompt: str, *args, params: dict | None = None):
+        """Get supports two call styles for backwards compatibility:
+        - get(prompt, params_dict)
+        - get(prompt, max_length, num_return_sequences, temperature)
+        """
+        # Legacy positional signature: prompt, max_length, num_return_sequences, temperature
+        if args and not params:
+            # If first arg is a dict, treat as params
+            if isinstance(args[0], dict):
+                params = args[0]
+            elif len(args) >= 3:
+                _, num_return_sequences, temperature = args[0], args[1], args[2]
+                params = {
+                    "max_length": args[0],
+                    "num_return_sequences": num_return_sequences,
+                    "temperature": temperature,
+                }
+            else:
+                params = {}
+
         params = params or {}
         key = self._make_key(prompt, params)
         with self._lock:
@@ -65,10 +84,37 @@ class LLMCache:
             self._hits += 1
             return value
 
-    def set(self, prompt: str, params: dict, response, ttl: int = None):
-        params = params or {}
-        key = self._make_key(prompt, params)
+    def set(self, prompt: str, *args, ttl: int | None = None, **kwargs):
+        """Set supports backwards-compatible signatures:
+        - set(prompt, params_dict, response, ttl=None)
+        - legacy: set(prompt, response, max_length, num_return_sequences, temperature)
+        """
+        params = {}
+        response = None
+
+        # If called as set(prompt, params_dict, response)
+        if args:
+            if isinstance(args[0], dict):
+                params = args[0]
+                if len(args) > 1:
+                    response = args[1]
+            else:
+                # legacy: set(prompt, response, max_length, num_return_sequences, temperature)
+                response = args[0]
+                if len(args) >= 4:
+                    params = {
+                        "max_length": args[1],
+                        "num_return_sequences": args[2],
+                        "temperature": args[3],
+                    }
+
+        # allow keyword usage: set(prompt, params=..., response=...)
+        params = kwargs.get("params", params)
+        if response is None:
+            response = kwargs.get("response")
+
         ttl_use = ttl if ttl is not None else self.default_ttl
+        key = self._make_key(prompt, params or {})
         with self._lock:
             if key in self._cache:
                 try:
@@ -106,6 +152,10 @@ class LLMCache:
                 "misses": self._misses,
                 "hit_rate": hit_rate,
             }
+
+    # Backwards-compatible alias used across the codebase/tests
+    def stats(self):
+        return self.get_stats()
 
 
 # Instancia global del cache
