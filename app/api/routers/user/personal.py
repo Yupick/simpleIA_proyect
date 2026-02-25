@@ -1,10 +1,10 @@
 """
 Routers para gestión de agenda personal del usuario (citas y tareas).
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from typing import List, Optional
-from datetime import datetime, date
+from typing import Optional
 from app.security.auth import get_current_regular_user
 from app.db import personal as personal_db
 
@@ -15,6 +15,7 @@ personal_db.init_personal_db()
 
 
 # === MODELS ===
+
 
 class AppointmentCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
@@ -58,10 +59,11 @@ class TaskUpdate(BaseModel):
 
 # === APPOINTMENTS ENDPOINTS ===
 
+
 @router.post("/appointments", status_code=status.HTTP_201_CREATED)
 async def create_appointment(
     appointment: AppointmentCreate,
-    current_user: dict = Depends(get_current_regular_user)
+    current_user: dict = Depends(get_current_regular_user),
 ):
     """Crea una nueva cita para el usuario actual."""
     appointment_id = personal_db.create_appointment(
@@ -72,7 +74,7 @@ async def create_appointment(
         end_datetime=appointment.end_datetime,
         location=appointment.location,
         attendees=appointment.attendees,
-        reminder_minutes=appointment.reminder_minutes
+        reminder_minutes=appointment.reminder_minutes,
     )
     return {"id": appointment_id, "message": "Cita creada exitosamente"}
 
@@ -82,22 +84,21 @@ async def list_appointments(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     status: Optional[str] = None,
-    current_user: dict = Depends(get_current_regular_user)
+    current_user: dict = Depends(get_current_regular_user),
 ):
     """Lista todas las citas del usuario actual."""
     appointments = personal_db.list_appointments(
         user_id=current_user["id"],
         start_date=start_date,
         end_date=end_date,
-        status=status
+        status=status,
     )
     return appointments
 
 
 @router.get("/appointments/count")
 async def get_appointments_count(
-    status: Optional[str] = None,
-    current_user: dict = Depends(get_current_regular_user)
+    status: Optional[str] = None, current_user: dict = Depends(get_current_regular_user)
 ):
     """Obtiene el conteo de citas del usuario."""
     count = personal_db.get_appointments_count(current_user["id"], status)
@@ -106,13 +107,14 @@ async def get_appointments_count(
 
 @router.get("/appointments/{appointment_id}")
 async def get_appointment(
-    appointment_id: int,
-    current_user: dict = Depends(get_current_regular_user)
+    appointment_id: int, current_user: dict = Depends(get_current_regular_user)
 ):
     """Obtiene una cita específica del usuario."""
     appointment = personal_db.get_appointment(appointment_id, current_user["id"])
     if not appointment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cita no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cita no encontrada"
+        )
     return appointment
 
 
@@ -120,7 +122,7 @@ async def get_appointment(
 async def update_appointment(
     appointment_id: int,
     appointment_update: AppointmentUpdate,
-    current_user: dict = Depends(get_current_regular_user)
+    current_user: dict = Depends(get_current_regular_user),
 ):
     """Actualiza una cita del usuario."""
     success = personal_db.update_appointment(
@@ -133,31 +135,34 @@ async def update_appointment(
         location=appointment_update.location,
         attendees=appointment_update.attendees,
         reminder_minutes=appointment_update.reminder_minutes,
-        status=appointment_update.status
+        status=appointment_update.status,
     )
     if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cita no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cita no encontrada"
+        )
     return {"message": "Cita actualizada exitosamente"}
 
 
 @router.delete("/appointments/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_appointment(
-    appointment_id: int,
-    current_user: dict = Depends(get_current_regular_user)
+    appointment_id: int, current_user: dict = Depends(get_current_regular_user)
 ):
     """Elimina una cita del usuario."""
     success = personal_db.delete_appointment(appointment_id, current_user["id"])
     if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cita no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cita no encontrada"
+        )
     return None
 
 
 # === TASKS ENDPOINTS ===
 
+
 @router.post("/tasks", status_code=status.HTTP_201_CREATED)
 async def create_task(
-    task: TaskCreate,
-    current_user: dict = Depends(get_current_regular_user)
+    task: TaskCreate, current_user: dict = Depends(get_current_regular_user)
 ):
     """Crea una nueva tarea para el usuario actual."""
     task_id = personal_db.create_task(
@@ -167,7 +172,7 @@ async def create_task(
         due_date=task.due_date,
         priority=task.priority,
         category=task.category,
-        reminder_minutes=task.reminder_minutes
+        reminder_minutes=task.reminder_minutes,
     )
     return {"id": task_id, "message": "Tarea creada exitosamente"}
 
@@ -177,22 +182,18 @@ async def list_tasks(
     status: Optional[str] = None,
     priority: Optional[str] = None,
     category: Optional[str] = None,
-    current_user: dict = Depends(get_current_regular_user)
+    current_user: dict = Depends(get_current_regular_user),
 ):
     """Lista todas las tareas del usuario actual."""
     tasks = personal_db.list_tasks(
-        user_id=current_user["id"],
-        status=status,
-        priority=priority,
-        category=category
+        user_id=current_user["id"], status=status, priority=priority, category=category
     )
     return tasks
 
 
 @router.get("/tasks/count")
 async def get_tasks_count(
-    status: Optional[str] = None,
-    current_user: dict = Depends(get_current_regular_user)
+    status: Optional[str] = None, current_user: dict = Depends(get_current_regular_user)
 ):
     """Obtiene el conteo de tareas del usuario."""
     count = personal_db.get_tasks_count(current_user["id"], status)
@@ -207,13 +208,14 @@ async def get_task_categories(current_user: dict = Depends(get_current_regular_u
 
 @router.get("/tasks/{task_id}")
 async def get_task(
-    task_id: int,
-    current_user: dict = Depends(get_current_regular_user)
+    task_id: int, current_user: dict = Depends(get_current_regular_user)
 ):
     """Obtiene una tarea específica del usuario."""
     task = personal_db.get_task(task_id, current_user["id"])
     if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada"
+        )
     return task
 
 
@@ -221,7 +223,7 @@ async def get_task(
 async def update_task(
     task_id: int,
     task_update: TaskUpdate,
-    current_user: dict = Depends(get_current_regular_user)
+    current_user: dict = Depends(get_current_regular_user),
 ):
     """Actualiza una tarea del usuario."""
     success = personal_db.update_task(
@@ -233,20 +235,23 @@ async def update_task(
         priority=task_update.priority,
         status=task_update.status,
         category=task_update.category,
-        reminder_minutes=task_update.reminder_minutes
+        reminder_minutes=task_update.reminder_minutes,
     )
     if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada"
+        )
     return {"message": "Tarea actualizada exitosamente"}
 
 
 @router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
-    task_id: int,
-    current_user: dict = Depends(get_current_regular_user)
+    task_id: int, current_user: dict = Depends(get_current_regular_user)
 ):
     """Elimina una tarea del usuario."""
     success = personal_db.delete_task(task_id, current_user["id"])
     if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada"
+        )
     return None

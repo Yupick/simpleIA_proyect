@@ -7,7 +7,10 @@ import os
 
 # Patch model loading to avoid heavy downloads during tests
 model_manager.load_model = lambda force=False: "dummy-model"
-model_manager.generate = lambda prompt, max_length=50, num_return_sequences=1, temperature=0.7: f"OUTPUT:{prompt}"  # noqa: E501
+model_manager.generate = (
+    lambda prompt, max_length=50, num_return_sequences=1, temperature=0.7: f"OUTPUT:{prompt}"
+)  # noqa: E501
+
 
 @pytest.fixture(scope="session")
 def client():

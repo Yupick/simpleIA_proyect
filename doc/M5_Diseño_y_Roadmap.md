@@ -1,7 +1,7 @@
 # M5 - Diseño y Roadmap: Consolidación y Nuevas Funcionalidades
 
-**Fecha**: 24 de noviembre de 2025  
-**Milestone**: M5 - Integración Real, Analytics Avanzados y Optimización  
+**Fecha**: 24 de noviembre de 2025
+**Milestone**: M5 - Integración Real, Analytics Avanzados y Optimización
 **Estado**: 📋 EN DISEÑO
 
 ---
@@ -107,12 +107,12 @@ from typing import Optional, Dict
 
 class WhatsAppClient:
     """Cliente para WhatsApp Business Cloud API."""
-    
+
     def __init__(self, access_token: str, phone_number_id: str):
         self.access_token = access_token
         self.phone_number_id = phone_number_id
         self.api_url = "https://graph.facebook.com/v18.0"
-    
+
     async def send_message(
         self,
         to: str,
@@ -122,11 +122,11 @@ class WhatsAppClient:
         """Envía mensaje por WhatsApp."""
         # Implementación real con httpx
         pass
-    
+
     async def verify_webhook(self, mode: str, token: str, challenge: str) -> bool:
         """Verifica webhook de WhatsApp."""
         pass
-    
+
     async def mark_as_read(self, message_id: str):
         """Marca mensaje como leído."""
         pass
@@ -153,21 +153,21 @@ async def whatsapp_webhook(request: Request):
     Procesa mensajes entrantes y los enruta al asistente correcto.
     """
     body = await request.json()
-    
+
     # Extraer datos del mensaje
     entry = body.get('entry', [])[0]
     changes = entry.get('changes', [])[0]
     value = changes.get('value', {})
     messages = value.get('messages', [])
-    
+
     if not messages:
         return {"status": "no messages"}
-    
+
     message_data = messages[0]
     from_number = message_data.get('from')
     message_text = message_data.get('text', {}).get('body', '')
     message_id = message_data.get('id')
-    
+
     # 1. Identificar usuario
     user = await get_user_by_phone(from_number)
     if not user:
@@ -177,7 +177,7 @@ async def whatsapp_webhook(request: Request):
             message="¡Hola! Para usar este servicio, regístrate en nuestro sitio web."
         )
         return {"status": "user not registered"}
-    
+
     # 2. Guardar mensaje entrante
     await save_whatsapp_message(
         user_id=user['id'],
@@ -185,10 +185,10 @@ async def whatsapp_webhook(request: Request):
         direction='inbound',
         message=message_text
     )
-    
+
     # 3. Detectar intención y procesar
     intent = detect_intent(message_text)
-    
+
     if intent == 'commercial':
         assistant = CommercialAssistant(user_id=user['id'])
         response = await assistant.process_message(
@@ -201,13 +201,13 @@ async def whatsapp_webhook(request: Request):
             message=message_text,
             llm_provider=get_llm_provider()
         )
-    
+
     # 4. Enviar respuesta por WhatsApp
     await whatsapp_client.send_message(
         to=from_number,
         message=response
     )
-    
+
     # 5. Guardar mensaje saliente
     await save_whatsapp_message(
         user_id=user['id'],
@@ -215,10 +215,10 @@ async def whatsapp_webhook(request: Request):
         direction='outbound',
         message=response
     )
-    
+
     # 6. Marcar como leído
     await whatsapp_client.mark_as_read(message_id)
-    
+
     return {"status": "processed"}
 ```
 
@@ -232,7 +232,7 @@ WHATSAPP_VERIFY_TOKEN=your_verify_token_here
 WHATSAPP_WEBHOOK_URL=https://your-domain.com/api/whatsapp/webhook
 ```
 
-**Estimación**: 
+**Estimación**:
 - DB: 50 líneas
 - WhatsApp Client: 200 líneas
 - Router actualizado: 150 líneas modificadas
@@ -302,13 +302,13 @@ from email.mime.multipart import MIMEMultipart
 
 class EmailClient:
     """Cliente para envío de emails."""
-    
+
     def __init__(self, smtp_host: str, smtp_port: int, username: str, password: str):
         self.smtp_host = smtp_host
         self.smtp_port = smtp_port
         self.username = username
         self.password = password
-    
+
     async def send_email(
         self,
         to: str,
@@ -321,12 +321,12 @@ class EmailClient:
         msg['From'] = self.username
         msg['To'] = to
         msg['Subject'] = subject
-        
+
         if html:
             msg.attach(MIMEText(body, 'html'))
         else:
             msg.attach(MIMEText(body, 'plain'))
-        
+
         with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
             server.starttls()
             server.login(self.username, self.password)
@@ -351,7 +351,7 @@ class ReminderScheduler:
     def __init__(self):
         self.whatsapp_client = WhatsAppClient(...)
         self.email_client = EmailClient(...)
-    
+
     async def send_reminder(
         self,
         user_id: int,
@@ -362,20 +362,20 @@ class ReminderScheduler:
         **kwargs
     ):
         """Envía recordatorio por los canales configurados del usuario."""
-        
+
         # Obtener preferencias
         prefs = await get_user_preferences(user_id)
-        
+
         # Verificar quiet hours
         now = datetime.now()
         if prefs.get('quiet_hours_start') and prefs.get('quiet_hours_end'):
             if is_in_quiet_hours(now, prefs):
                 logger.info(f"User {user_id} in quiet hours, delaying reminder")
                 return
-        
+
         message = f"🔔 {title}\n{details}"
         sent_channels = []
-        
+
         # Enviar por WhatsApp si está habilitado
         if prefs.get('whatsapp_enabled'):
             try:
@@ -405,7 +405,7 @@ class ReminderScheduler:
                     status='failed',
                     error=str(e)
                 )
-        
+
         # Enviar por Email si está habilitado
         if prefs.get('email_enabled'):
             try:
@@ -436,7 +436,7 @@ class ReminderScheduler:
                     status='failed',
                     error=str(e)
                 )
-        
+
         logger.info(f"Reminder sent to user {user_id} via {sent_channels}")
 ```
 
@@ -514,45 +514,45 @@ async def get_reminder_history(
 from app.models.embeddings import get_embedding_store
 
 class CommercialAssistant(BaseAssistant):
-    
+
     def __init__(self, user_id: int):
         super().__init__(user_id)
         self.embedding_store = get_embedding_store()
         self.index_key = f"products_user_{user_id}"
-    
+
     def index_products(self):
         """Indexa todos los productos del usuario en el embedding store."""
         products = list_products(user_id=self.user_id, active_only=True)
-        
+
         if not products:
             return
-        
+
         # Crear textos para embeddings
         documents = []
         for p in products:
             doc = f"{p['name']} - {p['description']} - Categoría: {p['category']} - Precio: ${p['price']} - Stock: {p['stock']}"
             documents.append(doc)
-        
+
         # Limpiar índice anterior del usuario
         self.embedding_store.clear_user_index(self.index_key)
-        
+
         # Agregar documentos
         self.embedding_store.add_documents(
             documents=documents,
             metadata=[{"product_id": p['id'], "user_id": self.user_id} for p in products],
             index_key=self.index_key
         )
-        
+
         logger.info(f"Indexed {len(products)} products for user {self.user_id}")
-    
+
     def search_relevant_products_semantic(self, query: str, limit: int = 5) -> List[Dict]:
         """
         Búsqueda semántica de productos usando embeddings.
-        
+
         Args:
             query: Consulta del usuario
             limit: Número máximo de resultados
-            
+
         Returns:
             Lista de productos relevantes con scores
         """
@@ -562,22 +562,22 @@ class CommercialAssistant(BaseAssistant):
             top_k=limit,
             index_key=self.index_key
         )
-        
+
         if not results:
             return []
-        
+
         # Obtener IDs de productos
         product_ids = [r['metadata']['product_id'] for r in results]
-        
+
         # Cargar productos completos
         products = []
         for pid in product_ids:
             product = get_product_by_id(self.user_id, pid)
             if product:
                 products.append(product)
-        
+
         return products
-    
+
     async def process_message(
         self,
         message: str,
@@ -586,7 +586,7 @@ class CommercialAssistant(BaseAssistant):
     ) -> str:
         """
         Procesa un mensaje con RAG (Retrieval Augmented Generation).
-        
+
         Flow:
         1. Buscar productos relevantes con embeddings
         2. Construir contexto RAG
@@ -598,29 +598,29 @@ class CommercialAssistant(BaseAssistant):
             query=message,
             limit=3
         )
-        
+
         # 2. Construir contexto RAG
         rag_context = ""
         if relevant_products:
             rag_context = "\n\nPRODUCTOS RELEVANTES ENCONTRADOS:\n"
             for p in relevant_products:
                 rag_context += f"- {p['name']}: {p['description']} (${p['price']}, Stock: {p['stock']})\n"
-        
+
         # 3. System prompt con contexto ampliado
         system_prompt = self.build_system_prompt()
-        
+
         # 4. Prompt del usuario con RAG
         user_prompt = message
         if rag_context:
             user_prompt = f"{rag_context}\n\nPregunta del cliente: {message}"
-        
+
         # 5. Generar respuesta con LLM
         if llm_provider:
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ]
-            
+
             response = await llm_provider.generate(messages)
             return response
         else:
@@ -634,29 +634,29 @@ class CommercialAssistant(BaseAssistant):
 # app/assistants/personal.py (modificar)
 
 class PersonalAssistant(BaseAssistant):
-    
+
     def index_tasks_and_appointments(self):
         """Indexa tareas y citas del usuario."""
         tasks = list_tasks(user_id=self.user_id, status="pending")
         appointments = list_appointments(user_id=self.user_id, status="scheduled")
-        
+
         documents = []
-        
+
         # Tareas
         for t in tasks:
             doc = f"Tarea: {t['title']} - {t['description']} - Prioridad: {t['priority']} - Vence: {t['due_date']}"
             documents.append(doc)
-        
+
         # Citas
         for a in appointments:
             doc = f"Cita: {a['title']} - {a['description']} - Fecha: {a['start_datetime']} - Ubicación: {a['location']}"
             documents.append(doc)
-        
+
         self.embedding_store.add_documents(
             documents=documents,
             index_key=f"personal_user_{self.user_id}"
         )
-    
+
     def search_relevant_items(self, query: str, limit: int = 3):
         """Búsqueda semántica de tareas y citas."""
         results = self.embedding_store.search(
@@ -682,11 +682,11 @@ async def create_product(
         user_id=current_user['id'],
         **product.dict()
     )
-    
+
     # Auto-indexar
     assistant = CommercialAssistant(user_id=current_user['id'])
     assistant.index_products()
-    
+
     return {"id": product_id, "indexed": True}
 ```
 
@@ -863,7 +863,7 @@ class ProductCreate(BaseModel):
     name: str
     description: str
     price: float
-    
+
     class Config:
         schema_extra = {
             "example": {

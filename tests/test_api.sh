@@ -18,7 +18,7 @@ function api_call() {
     local endpoint=$2
     local data=$3
     local headers=${4:-}
-    
+
     if [ -n "$headers" ]; then
         curl -s -X "$method" "$API_URL$endpoint" \
             -H "Content-Type: application/json" \

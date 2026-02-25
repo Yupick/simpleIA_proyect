@@ -14,7 +14,6 @@ Estructura (relativa a la raíz del proyecto):
   - feedback/feedback.sqlite para almacenar feedback.
 """
 
-import os
 import json
 import time
 import sqlite3
@@ -22,14 +21,22 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
-import fitz          # PyMuPDF, para archivos PDF
+import fitz  # PyMuPDF, para archivos PDF
 import docx
 from openpyxl import load_workbook
-from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorForLanguageModeling
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    Trainer,
+    TrainingArguments,
+    DataCollatorForLanguageModeling,
+)
 from datasets import Dataset
 import logging
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # La ruta base se asume que es el directorio raíz del proyecto.
@@ -92,7 +99,9 @@ def parse_file(file_path: Path):
             sheet = wb.active
             lines = []
             for row in sheet.iter_rows():
-                line = " ".join(str(cell.value) for cell in row if cell.value is not None)
+                line = " ".join(
+                    str(cell.value) for cell in row if cell.value is not None
+                )
                 if line:
                     lines.append(line)
             return lines
@@ -147,8 +156,10 @@ def load_model():
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModelForCausalLM.from_pretrained(model_name)
         logger.info("Pretrained model loaded successfully.")
+        return tokenizer, model
     except Exception as e:
         logger.error(f"Error loading model {model_name}: {e}")
+        return None, None
 
 
 def train_model(model_name: str, training_data: list):
@@ -169,10 +180,7 @@ def train_model(model_name: str, training_data: list):
     # Función de tokenización actualizada para incluir los labels.
     def tokenize_function(example):
         tokenized = tokenizer(
-            example["text"],
-            padding="max_length",
-            truncation=True,
-            max_length=128
+            example["text"], padding="max_length", truncation=True, max_length=128
         )
         tokenized["labels"] = tokenized["input_ids"].copy()  # Se asignan los labels
         return tokenized
@@ -196,7 +204,7 @@ def train_model(model_name: str, training_data: list):
     config_vals = load_config()
     num_train_epochs = config_vals.get("num_train_epochs", 3)
     per_device_train_batch_size = config_vals.get("per_device_train_batch_size", 4)
-    
+
     # Se han removido evaluation_strategy y report_to para evitar errores en esta versión.
     training_args = TrainingArguments(
         output_dir=str(output_path),
@@ -218,7 +226,7 @@ def train_model(model_name: str, training_data: list):
             model=model,
             args=training_args,
             train_dataset=tokenized,
-            data_collator=data_collator
+            data_collator=data_collator,
         )
         trainer.train()
         trainer.save_model(output_path)
@@ -271,7 +279,9 @@ def retrain_with_feedback():
 
 def delete_trained_model():
     if MODEL_DIR.exists():
-        confirm = input("Delete trained model and all its data? (y/n): ").strip().lower()
+        confirm = (
+            input("Delete trained model and all its data? (y/n): ").strip().lower()
+        )
         if confirm == "y":
             try:
                 shutil.rmtree(MODEL_DIR)
@@ -285,57 +295,62 @@ def delete_trained_model():
 def select_pretrained_model():
     english_models = ["gpt2", "bigscience/bloom-560m", "EleutherAI/gpt-neo-125M"]
     spanish_models = ["datificate/gpt2-small-spanish", "flax-community/gpt-2-spanish"]
-        logger.info("\n📦 Available Models:")
-        logger.info("\nEnglish Models:")
-        for idx, model in enumerate(english_models, 1):
-            logger.info(f"  {idx}. {model}")
+    logger.info("\n📦 Available Models:")
+    logger.info("English Models:")
+    for idx, model in enumerate(english_models, 1):
+        logger.info(f"  {idx}. {model}")
     offset = len(english_models)
-        logger.info("\nSpanish Models:")
-        for idx, model in enumerate(spanish_models, offset + 1):
-            logger.info(f"  {idx}. {model}")
-        logger.info("  0. Back")
+    logger.info("Spanish Models:")
+    for idx, model in enumerate(spanish_models, offset + 1):
+        logger.info(f"  {idx}. {model}")
+    logger.info("  0. Back")
     choice = input("Select a model: ").strip()
     if choice == "0":
         return
     try:
         choice = int(choice)
-        total_models = len(english_models) + len(spanish_models)
-        if choice < 1 or choice > total_models:
-                logger.warning("Invalid option.")
-            return
-        if choice <= len(english_models):
-            selected = english_models[choice - 1]
-        else:
-            selected = spanish_models[choice - len(english_models)]
-            logger.info(f"Selected Model: {selected}")
-        config = load_config()
-        config["selected_model"] = selected
-        save_config(config)
-        choice_training = input("Perform fine tuning with available data? (y/n): ").strip().lower()
-        if choice_training == "y":
-            dialogue_data, _, _ = collect_training_data(DIALOGUE_DIR)
-            knowledge_data, _, _ = collect_training_data(KNOWLEDGE_DIR)
-            training_data = dialogue_data + knowledge_data
-            if not training_data:
-                    logger.warning("Not enough data for training, loading pretrained model without training.")
-                load_model()
-            else:
-                train_model(selected, training_data)
-        else:
+    except ValueError:
+        logger.warning("Invalid option.")
+        return
+    total_models = len(english_models) + len(spanish_models)
+    if choice < 1 or choice > total_models:
+        logger.warning("Invalid option.")
+        return
+    if choice <= len(english_models):
+        selected = english_models[choice - 1]
+    else:
+        selected = spanish_models[choice - len(english_models)]
+    logger.info(f"Selected Model: {selected}")
+    config = load_config()
+    config["selected_model"] = selected
+    save_config(config)
+    choice_training = (
+        input("Perform fine tuning with available data? (y/n): ").strip().lower()
+    )
+    if choice_training == "y":
+        dialogue_data, _, _ = collect_training_data(DIALOGUE_DIR)
+        knowledge_data, _, _ = collect_training_data(KNOWLEDGE_DIR)
+        training_data = dialogue_data + knowledge_data
+        if not training_data:
+            logger.warning(
+                "Not enough data for training, loading pretrained model without training."
+            )
             load_model()
-    except (ValueError, IndexError):
-            logger.warning("Invalid option.")
+        else:
+            train_model(selected, training_data)
+    else:
+        load_model()
 
 
 def main_menu():
     while True:
-            logger.info("\n=== MAIN MENU ===")
-            logger.info("1. Select pretrained model")
-            logger.info("2. Delete trained model")
-            logger.info("3. Train with files (dialogue/knowledge)")
-            logger.info("4. Manual training")
-            logger.info("5. Retrain with user feedback")
-            logger.info("0. Exit")
+        logger.info("\n=== MAIN MENU ===")
+        logger.info("1. Select pretrained model")
+        logger.info("2. Delete trained model")
+        logger.info("3. Train with files (dialogue/knowledge)")
+        logger.info("4. Manual training")
+        logger.info("5. Retrain with user feedback")
+        logger.info("0. Exit")
         choice = input("Select an option: ").strip()
         if choice == "1":
             select_pretrained_model()
@@ -345,7 +360,7 @@ def main_menu():
             dialogue_data, _, _ = collect_training_data(DIALOGUE_DIR)
             knowledge_data, _, _ = collect_training_data(KNOWLEDGE_DIR)
             total_data = dialogue_data + knowledge_data
-                logger.info(f"\nTotal lines for training: {len(total_data)}")
+            logger.info(f"\nTotal lines for training: {len(total_data)}")
             if not total_data:
                 logger.error("No data found for training.")
             else:
@@ -358,10 +373,10 @@ def main_menu():
         elif choice == "5":
             retrain_with_feedback()
         elif choice == "0":
-                logger.info("Exiting.")
+            logger.info("Exiting.")
             break
         else:
-                logger.warning("Invalid option, try again.")
+            logger.warning("Invalid option, try again.")
 
 
 if __name__ == "__main__":

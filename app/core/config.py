@@ -9,6 +9,7 @@ ENV_PATH = BASE_DIR / ".env"
 
 load_dotenv(dotenv_path=ENV_PATH if ENV_PATH.exists() else None)
 
+
 class AppConfig:
     def __init__(self):
         self._data = {}
@@ -43,6 +44,11 @@ class AppConfig:
 
     @property
     def per_device_train_batch_size(self) -> int:
-        return int(self._data.get("per_device_train_batch_size", os.getenv("TRAIN_BATCH_SIZE", 4)))
+        return int(
+            self._data.get(
+                "per_device_train_batch_size", os.getenv("TRAIN_BATCH_SIZE", 4)
+            )
+        )
+
 
 config = AppConfig()

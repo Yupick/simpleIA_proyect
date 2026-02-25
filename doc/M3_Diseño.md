@@ -1,7 +1,7 @@
 # M3 - Diseño: Panel de Administración Web y Mejoras UI
 
-**Fecha**: 20 de noviembre de 2025  
-**Milestone**: M3 - Admin Panel Web, Gestión Usuarios, UI/UX Mejorada  
+**Fecha**: 20 de noviembre de 2025
+**Milestone**: M3 - Admin Panel Web, Gestión Usuarios, UI/UX Mejorada
 **Estado**: 📋 EN DISEÑO
 
 ---
@@ -970,8 +970,8 @@ templates/
 
 ### Total M3
 
-**Nuevas líneas**: ~3,825  
-**Archivos nuevos**: 11  
+**Nuevas líneas**: ~3,825
+**Archivos nuevos**: 11
 **Archivos modificados**: 7
 
 ---

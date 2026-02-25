@@ -21,19 +21,19 @@
         <div class="admin-stat-value" id="stat-users">0</div>
         <div class="admin-stat-icon">👥</div>
     </div>
-    
+
     <div class="admin-stat-card">
         <div class="admin-stat-label">Administradores</div>
         <div class="admin-stat-value" id="stat-admins">0</div>
         <div class="admin-stat-icon">👑</div>
     </div>
-    
+
     <div class="admin-stat-card">
         <div class="admin-stat-label">Feedbacks</div>
         <div class="admin-stat-value" id="stat-feedback">0</div>
         <div class="admin-stat-icon">💬</div>
     </div>
-    
+
     <div class="admin-stat-card">
         <div class="admin-stat-label">Provider Actual</div>
         <div class="admin-stat-value" id="stat-provider" style="font-size: 1.5rem;">-</div>
@@ -79,7 +79,7 @@ function showToast(message, type = 'success') {
     toast.textContent = message;
     toast.className = `alert alert-${type}`;
     toast.style.display = 'block';
-    
+
     setTimeout(() => {
         toast.style.display = 'none';
     }, 3000);
@@ -112,19 +112,19 @@ async function loadStats() {
         }
 
         const stats = await response.json();
-        
+
         // Actualizar cards
         document.getElementById('stat-users').textContent = stats.total_users || 0;
         document.getElementById('stat-admins').textContent = stats.total_admins || 0;
         document.getElementById('stat-feedback').textContent = stats.total_feedback || 0;
         document.getElementById('stat-provider').textContent = stats.current_provider || '-';
-        
+
         // Actualizar información del sistema
         document.getElementById('info-provider').textContent = stats.current_provider || '-';
         document.getElementById('info-model').textContent = stats.current_model || '-';
         document.getElementById('info-users-db').textContent = formatBytes(stats.db_sizes?.users_db || 0);
         document.getElementById('info-feedback-db').textContent = formatBytes(stats.db_sizes?.feedback_db || 0);
-        
+
     } catch (error) {
         console.error('Error:', error);
         showToast('Error al cargar estadísticas', 'error');
@@ -134,7 +134,7 @@ async function loadStats() {
 // Cargar estadísticas al iniciar
 document.addEventListener('DOMContentLoaded', () => {
     loadStats();
-    
+
     // Actualizar cada 30 segundos
     setInterval(loadStats, 30000);
 });

@@ -6,42 +6,42 @@
     --primary-light: #E3F2FD;
     --secondary-color: #50C878;
     --accent-color: #FF6B6B;
-    
+
     /* Colores de texto */
     --text-primary: #2C3E50;
     --text-secondary: #7F8C8D;
     --text-light: #BDC3C7;
-    
+
     /* Colores de fondo */
     --bg-primary: #FFFFFF;
     --bg-secondary: #F5F6FA;
     --bg-dark: #2C3E50;
     --bg-overlay: rgba(0, 0, 0, 0.5);
-    
+
     /* Colores de estado */
     --success: #27AE60;
     --warning: #F39C12;
     --error: #E74C3C;
     --info: #3498DB;
-    
+
     /* Sombras */
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
-    
+
     /* Espaciado */
     --spacing-xs: 0.25rem;
     --spacing-sm: 0.5rem;
     --spacing-md: 1rem;
     --spacing-lg: 1.5rem;
     --spacing-xl: 2rem;
-    
+
     /* Bordes */
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-full: 9999px;
-    
+
     /* Fuentes */
     --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     --font-size-sm: 0.875rem;
@@ -559,11 +559,11 @@ textarea.form-control {
         --font-size-xl: 1.25rem;
         --font-size-2xl: 1.75rem;
     }
-    
+
     .container {
         padding: 0 var(--spacing-sm);
     }
-    
+
     .navbar-menu {
         position: absolute;
         top: 100%;
@@ -575,37 +575,37 @@ textarea.form-control {
         box-shadow: var(--shadow-md);
         display: none;
     }
-    
+
     .navbar-menu.active {
         display: flex;
     }
-    
+
     .navbar-toggle {
         display: block;
     }
-    
+
     .col-6,
     .col-4,
     .col-3 {
         width: 100%;
     }
-    
+
     .chat-box {
         height: calc(100vh - 200px);
     }
-    
+
     .message {
         max-width: 90%;
     }
-    
+
     .table-container {
         border-radius: 0;
     }
-    
+
     .btn {
         width: 100%;
     }
-    
+
     .card {
         margin-bottom: var(--spacing-md);
     }
@@ -615,7 +615,7 @@ textarea.form-control {
     .chat-input-form {
         flex-direction: column;
     }
-    
+
     .chat-send-btn {
         width: 100%;
     }

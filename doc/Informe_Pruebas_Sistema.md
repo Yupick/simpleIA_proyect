@@ -1,7 +1,7 @@
 # Informe de Pruebas del Sistema SimpleIA
 
-**Fecha**: 22 de noviembre de 2025  
-**Versión**: M4 Completo  
+**Fecha**: 22 de noviembre de 2025
+**Versión**: M4 Completo
 **Estado**: Producción
 
 ---
@@ -538,8 +538,8 @@ Con configuración de un provider LLM alternativo (Claude o HuggingFace local), 
 
 ---
 
-**Informe generado**: 22 de noviembre de 2025, 15:07 GMT-3  
-**Pruebas realizadas por**: GitHub Copilot Agent  
+**Informe generado**: 22 de noviembre de 2025, 15:07 GMT-3
+**Pruebas realizadas por**: GitHub Copilot Agent
 **Archivos modificados durante pruebas**: 3
 
 - `app/models/model_manager.py`

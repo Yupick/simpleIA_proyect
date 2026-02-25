@@ -45,7 +45,9 @@ def snapshot():
             "path_counts": dict(_path_counts),
             "avg_latency_ms": avg_latencies,
             "status_counts": dict(_status_counts),
-            "path_status_counts": {p: dict(sc) for p, sc in _path_status_counts.items()},
+            "path_status_counts": {
+                p: dict(sc) for p, sc in _path_status_counts.items()
+            },
         }
 
 

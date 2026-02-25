@@ -56,18 +56,18 @@ queries=(
 for query in "${queries[@]}"; do
     echo "❓ Usuario: $query"
     echo
-    
+
     response=$(curl -s -X POST "$API_URL/api/user/chat/message" \
         -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d "{\"content\": \"$query\", \"assistant_type\": \"commercial\"}")
-    
+
     echo "🤖 Asistente:"
     echo "$response" | python3 -c "import sys, json; data=json.load(sys.stdin); print('   ' + data.get('response', 'Error').replace('\n', '\n   '))" 2>/dev/null
     echo
     echo "---"
     echo
-    
+
     sleep 1
 done
 

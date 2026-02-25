@@ -8,7 +8,9 @@ def test_predict_without_token(client):
 def test_predict_with_token(client):
     # Register + login
     client.post("/auth/register", json={"username": "user2", "password": "pass2"})
-    r_login = client.post("/auth/login", data={"username": "user2", "password": "pass2"})
+    r_login = client.post(
+        "/auth/login", data={"username": "user2", "password": "pass2"}
+    )
     token = r_login.json()["access_token"]
 
     r = client.post(

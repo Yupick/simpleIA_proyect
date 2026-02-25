@@ -20,7 +20,7 @@ elif git show-ref --verify --quiet refs/heads/master; then
 else
   # Si no existe, usar la rama actual como principal
   MAIN_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-  echo "No se encontró 'main' ni 'master'. Usando '$MAIN_BRANCH' como rama principal local." 
+  echo "No se encontró 'main' ni 'master'. Usando '$MAIN_BRANCH' como rama principal local."
 fi
 
 echo "Rama principal detectada: $MAIN_BRANCH"

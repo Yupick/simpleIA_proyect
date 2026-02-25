@@ -2,6 +2,7 @@ import time
 from collections import defaultdict
 from threading import Lock
 
+
 class RateLimiter:
     def __init__(self, requests: int, window_seconds: int):
         self.requests = requests

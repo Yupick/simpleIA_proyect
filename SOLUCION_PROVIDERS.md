@@ -44,7 +44,7 @@ Por seguridad, las credenciales de ejemplo han sido eliminadas de la documentaci
 
 ✅ Login exitoso con permisos de admin
 ✅ Endpoint `/admin/providers/current` → 200 OK
-✅ Endpoint `/admin/providers/models?provider=huggingface` → 200 OK  
+✅ Endpoint `/admin/providers/models?provider=huggingface` → 200 OK
 ✅ Endpoint `/admin/providers/models?provider=claude` → 200 OK
 
 ## 📝 Mejoras Implementadas en el Frontend

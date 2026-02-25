@@ -24,11 +24,10 @@ async def user_dashboard(request: Request, user: dict = Depends(get_current_user
     # Verificar que no sea super admin
     if user.get("role") == "superadmin":
         return RedirectResponse(url="/admin/dashboard", status_code=302)
-    
-    return templates.TemplateResponse("user/dashboard.html", {
-        "request": request,
-        "user": user
-    })
+
+    return templates.TemplateResponse(
+        "user/dashboard.html", {"request": request, "user": user}
+    )
 
 
 @router.get("", response_class=HTMLResponse)

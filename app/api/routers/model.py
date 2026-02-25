@@ -5,12 +5,15 @@ from ...models.model_manager import load_model, current_model_name
 
 router = APIRouter(prefix="/model", tags=["model"])
 
+
 class ModelUpdate(BaseModel):
     model_name: str
+
 
 @router.get("")
 async def get_model():
     return {"selected_model": current_model_name() or config.selected_model}
+
 
 @router.post("")
 async def update_model(body: ModelUpdate):

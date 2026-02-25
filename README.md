@@ -608,4 +608,3 @@ bash scripts/gitflow-init.sh origin
 ```
 
 - Protege `main` y `develop` en el remoto y trabaja con `feature/*`, `release/*` y `hotfix/*`.
-

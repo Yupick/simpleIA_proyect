@@ -2,8 +2,8 @@
 
 ## Sistema Multi-Tenant para Asistentes IA
 
-**Fecha:** 21 de Noviembre de 2025  
-**Versión:** M4 Completo (8 Sprints)  
+**Fecha:** 21 de Noviembre de 2025
+**Versión:** M4 Completo (8 Sprints)
 **Estado:** ✅ **TODAS LAS PRUEBAS PASADAS**
 
 ---
@@ -408,6 +408,6 @@ from app.models.embeddings import get_embeddings  # ❌
 
 ---
 
-**Firma:** Sistema SimpleIA - Módulo 4  
-**Fecha de Completado:** 21 de Noviembre de 2025  
+**Firma:** Sistema SimpleIA - Módulo 4
+**Fecha de Completado:** 21 de Noviembre de 2025
 **Estado Final:** ✅ **PRODUCTION READY**

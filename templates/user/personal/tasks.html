@@ -787,10 +787,10 @@
             <div class="task-card ${isCompleted ? "completed" : ""} ${
           isOverdue ? "overdue" : ""
         } priority-${task.priority}">
-                <div class="task-checkbox ${isCompleted ? "checked" : ""}" 
+                <div class="task-checkbox ${isCompleted ? "checked" : ""}"
                      onclick="toggleTaskStatus(${task.id})">
                 </div>
-                
+
                 <div class="task-content" onclick="editTask(${task.id})">
                     <div class="task-title">${escapeHtml(task.title)}</div>
                     ${
@@ -800,7 +800,7 @@
                           )}</div>`
                         : ""
                     }
-                    
+
                     <div class="task-meta">
                         <div class="task-meta-item">
                             <span class="priority-badge ${
@@ -830,7 +830,7 @@
                         }
                     </div>
                 </div>
-                
+
                 <div class="task-actions">
                     <button class="task-action-btn" onclick="event.stopPropagation(); editTask(${
                       task.id

@@ -1,7 +1,6 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import os
-import logging
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from .api.routers.predict import router as predict_router
@@ -28,7 +27,10 @@ from .core import metrics
 from .core.metrics import LatencyTimer
 from .core.settings import settings
 
-rate_limiter = RateLimiter(requests=settings.RATE_LIMIT_REQUESTS, window_seconds=settings.RATE_LIMIT_WINDOW_SECONDS)
+rate_limiter = RateLimiter(
+    requests=settings.RATE_LIMIT_REQUESTS,
+    window_seconds=settings.RATE_LIMIT_WINDOW_SECONDS,
+)
 configure_logging(json_mode=True, level=settings.LOG_LEVEL)
 logger = get_logger("app")
 
@@ -58,6 +60,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.middleware("http")
 async def instrumentation_middleware(request: Request, call_next):
     request_id = request.headers.get("x-request-id") or os.urandom(6).hex()
@@ -70,9 +73,13 @@ async def instrumentation_middleware(request: Request, call_next):
     logger.info(f"Request {request.method} {path}")
     try:
         if path.startswith("/predict"):
-            identifier = request.headers.get("X-Rate-Key") or ((request.client and request.client.host) or "unknown")
+            identifier = request.headers.get("X-Rate-Key") or (
+                (request.client and request.client.host) or "unknown"
+            )
             if not rate_limiter.allow(identifier):
-                response = JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
+                response = JSONResponse(
+                    {"detail": "Rate limit exceeded"}, status_code=429
+                )
             else:
                 response = await call_next(request)
         else:
@@ -91,9 +98,11 @@ async def instrumentation_middleware(request: Request, call_next):
         logger.info(f"Completed {request.method} {path} {ms:.2f}ms")
         request_id_var.set(None)
 
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
 
 app.include_router(auth_router)
 app.include_router(model_router)

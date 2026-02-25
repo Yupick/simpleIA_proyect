@@ -254,6 +254,6 @@ async def predict_stream(req: PredictRequest):
 
 ---
 
-**Fecha de Inicio:** 20 noviembre 2025  
-**Responsable:** Equipo LLM Modular  
+**Fecha de Inicio:** 20 noviembre 2025
+**Responsable:** Equipo LLM Modular
 **Revisión:** Post cada sprint

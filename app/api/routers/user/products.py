@@ -1,6 +1,7 @@
 """
 Router para gestión de productos comerciales del usuario.
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -49,8 +50,7 @@ class ProductResponse(BaseModel):
 
 @router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product(
-    product: ProductCreate,
-    current_user: dict = Depends(get_current_regular_user)
+    product: ProductCreate, current_user: dict = Depends(get_current_regular_user)
 ):
     """Crea un nuevo producto para el usuario actual."""
     product_id = products_db.create_product(
@@ -61,9 +61,9 @@ async def create_product(
         sku=product.sku,
         category=product.category,
         stock=product.stock,
-        active=product.active
+        active=product.active,
     )
-    
+
     created_product = products_db.get_product(product_id, current_user["id"])
     return ProductResponse(**created_product)
 
@@ -73,14 +73,14 @@ async def list_products(
     category: Optional[str] = None,
     active_only: bool = True,
     search: Optional[str] = None,
-    current_user: dict = Depends(get_current_regular_user)
+    current_user: dict = Depends(get_current_regular_user),
 ):
     """Lista todos los productos del usuario actual."""
     products = products_db.list_products(
         user_id=current_user["id"],
         category=category,
         active_only=active_only,
-        search=search
+        search=search,
     )
     return [ProductResponse(**p) for p in products]
 
@@ -93,8 +93,7 @@ async def get_categories(current_user: dict = Depends(get_current_regular_user))
 
 @router.get("/count")
 async def get_product_count(
-    active_only: bool = True,
-    current_user: dict = Depends(get_current_regular_user)
+    active_only: bool = True, current_user: dict = Depends(get_current_regular_user)
 ):
     """Obtiene el conteo de productos del usuario."""
     count = products_db.get_product_count(current_user["id"], active_only)
@@ -103,15 +102,13 @@ async def get_product_count(
 
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
-    product_id: int,
-    current_user: dict = Depends(get_current_regular_user)
+    product_id: int, current_user: dict = Depends(get_current_regular_user)
 ):
     """Obtiene un producto específico del usuario."""
     product = products_db.get_product(product_id, current_user["id"])
     if not product:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Producto no encontrado"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado"
         )
     return ProductResponse(**product)
 
@@ -120,7 +117,7 @@ async def get_product(
 async def update_product(
     product_id: int,
     product_update: ProductUpdate,
-    current_user: dict = Depends(get_current_regular_user)
+    current_user: dict = Depends(get_current_regular_user),
 ):
     """Actualiza un producto del usuario."""
     success = products_db.update_product(
@@ -132,15 +129,14 @@ async def update_product(
         sku=product_update.sku,
         category=product_update.category,
         stock=product_update.stock,
-        active=product_update.active
+        active=product_update.active,
     )
-    
+
     if not success:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Producto no encontrado"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado"
         )
-    
+
     updated_product = products_db.get_product(product_id, current_user["id"])
     return ProductResponse(**updated_product)
 
@@ -149,18 +145,17 @@ async def update_product(
 async def delete_product(
     product_id: int,
     hard_delete: bool = False,
-    current_user: dict = Depends(get_current_regular_user)
+    current_user: dict = Depends(get_current_regular_user),
 ):
     """Elimina un producto del usuario (soft delete por defecto)."""
     if hard_delete:
         success = products_db.hard_delete_product(product_id, current_user["id"])
     else:
         success = products_db.delete_product(product_id, current_user["id"])
-    
+
     if not success:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Producto no encontrado"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado"
         )
-    
+
     return None

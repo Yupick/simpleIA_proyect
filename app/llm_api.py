@@ -25,7 +25,6 @@ from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -52,15 +51,19 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
 ### Funciones de Configuración y Modelo
+
 
 def load_config():
     if CONFIG_PATH.exists():
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
+
 
 def save_config(config):
     try:
@@ -69,6 +72,7 @@ def save_config(config):
             json.dump(config, f, indent=4)
     except Exception as e:
         logger.error(f"Error saving config: {e}")
+
 
 def load_model():
     global MODEL, TOKENIZER, CURRENT_MODEL_NAME
@@ -80,7 +84,10 @@ def load_model():
     local_model_path = None
     for d in MODEL_DIR.glob(f"{model_name.replace('/', '_')}*"):
         if d.is_dir():
-            if local_model_path is None or d.stat().st_mtime > local_model_path.stat().st_mtime:
+            if (
+                local_model_path is None
+                or d.stat().st_mtime > local_model_path.stat().st_mtime
+            ):
                 local_model_path = d
     try:
         if local_model_path:
@@ -94,60 +101,77 @@ def load_model():
     except Exception as e:
         logger.error(f"Error loading model: {e}")
 
+
 def init_feedback_db():
     FEEDBACK_DIR.mkdir(exist_ok=True)
     try:
         conn = sqlite3.connect(str(FEEDBACK_DB_PATH))
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS feedback (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 text TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
         conn.commit()
     except Exception as e:
         logger.error(f"Error initializing feedback DB: {e}")
     finally:
         conn.close()
 
+
 def init_user_db():
     FEEDBACK_DIR.mkdir(exist_ok=True)
     try:
         conn = sqlite3.connect(str(USER_DB_PATH))
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE,
                 hashed_password TEXT
             )
-        """)
+        """
+        )
         conn.commit()
     except Exception as e:
         logger.error(f"Error initializing user DB: {e}")
     finally:
         conn.close()
 
+
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
+
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.utcnow() + (
+        expires_delta
+        if expires_delta
+        else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
 
 def get_user_from_db(username: str) -> Optional[dict]:
     try:
         conn = sqlite3.connect(str(USER_DB_PATH))
         cursor = conn.cursor()
-        cursor.execute("SELECT username, hashed_password FROM users WHERE username = ?", (username,))
+        cursor.execute(
+            "SELECT username, hashed_password FROM users WHERE username = ?",
+            (username,),
+        )
         row = cursor.fetchone()
         if row:
             return {"username": row[0], "hashed_password": row[1]}
@@ -158,7 +182,10 @@ def get_user_from_db(username: str) -> Optional[dict]:
     finally:
         conn.close()
 
-def get_current_user_optional(authorization: Optional[str] = Header(None)) -> Optional[dict]:
+
+def get_current_user_optional(
+    authorization: Optional[str] = Header(None),
+) -> Optional[dict]:
     if authorization is None:
         return None
     try:
@@ -173,25 +200,32 @@ def get_current_user_optional(authorization: Optional[str] = Header(None)) -> Op
     except (ValueError, PyJWTError):
         return None
 
+
 ### Modelos Pydantic
+
 
 class PredictionRequest(BaseModel):
     prompt: str
     max_length: int = 50
     num_return_sequences: int = 1
 
+
 class PredictionResponse(BaseModel):
     generated_text: str
+
 
 class FeedbackRequest(BaseModel):
     text: str
 
+
 class ModelUpdateRequest(BaseModel):
     model_name: str
+
 
 class UserRegister(BaseModel):
     username: str
     password: str
+
 
 ### Configuración de la API
 
@@ -210,19 +244,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.on_event("startup")
 def startup_event():
     load_model()
     init_feedback_db()
     init_user_db()
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
 
+
 @app.get("/model")
 async def get_current_model():
     return {"selected_model": CURRENT_MODEL_NAME}
+
 
 @app.post("/model")
 async def update_model(model_update: ModelUpdateRequest):
@@ -232,8 +270,12 @@ async def update_model(model_update: ModelUpdateRequest):
     load_model()
     return {"message": f"Model updated to {model_update.model_name}"}
 
+
 @app.post("/predict", response_model=PredictionResponse)
-async def predict(request: PredictionRequest, current_user: Optional[dict] = Depends(get_current_user_optional)):
+async def predict(
+    request: PredictionRequest,
+    current_user: Optional[dict] = Depends(get_current_user_optional),
+):
     if MODEL is None or TOKENIZER is None:
         raise HTTPException(status_code=500, detail="Model not loaded")
     try:
@@ -244,7 +286,7 @@ async def predict(request: PredictionRequest, current_user: Optional[dict] = Dep
             return_tensors="pt",
             padding=True,
             truncation=True,
-            max_length=request.max_length
+            max_length=request.max_length,
         )
         input_ids = encoding["input_ids"]
         attention_mask = encoding["attention_mask"]
@@ -255,7 +297,7 @@ async def predict(request: PredictionRequest, current_user: Optional[dict] = Dep
             num_return_sequences=request.num_return_sequences,
             do_sample=True,
             temperature=0.7,
-            pad_token_id=TOKENIZER.pad_token_id
+            pad_token_id=TOKENIZER.pad_token_id,
         )
         generated_text = TOKENIZER.decode(output_ids[0], skip_special_tokens=True)
         if current_user:
@@ -265,12 +307,20 @@ async def predict(request: PredictionRequest, current_user: Optional[dict] = Dep
         logger.error(f"Inference error: {e}")
         raise HTTPException(status_code=500, detail="Inference error")
 
+
 @app.post("/feedback")
-async def submit_feedback(feedback: FeedbackRequest, current_user: Optional[dict] = Depends(get_current_user_optional)):
+async def submit_feedback(
+    feedback: FeedbackRequest,
+    current_user: Optional[dict] = Depends(get_current_user_optional),
+):
     try:
         conn = sqlite3.connect(str(FEEDBACK_DB_PATH))
         cursor = conn.cursor()
-        text_to_store = f"[{current_user['username']}] {feedback.text}" if current_user else feedback.text
+        text_to_store = (
+            f"[{current_user['username']}] {feedback.text}"
+            if current_user
+            else feedback.text
+        )
         cursor.execute("INSERT INTO feedback (text) VALUES (?)", (text_to_store,))
         conn.commit()
     except Exception as e:
@@ -280,6 +330,7 @@ async def submit_feedback(feedback: FeedbackRequest, current_user: Optional[dict
         conn.close()
     return {"message": "Feedback received and stored."}
 
+
 @app.post("/register")
 async def register(user: UserRegister):
     if get_user_from_db(user.username):
@@ -288,7 +339,10 @@ async def register(user: UserRegister):
     try:
         conn = sqlite3.connect(str(USER_DB_PATH))
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, hashed_password) VALUES (?, ?)", (user.username, hashed))
+        cursor.execute(
+            "INSERT INTO users (username, hashed_password) VALUES (?, ?)",
+            (user.username, hashed),
+        )
         conn.commit()
         return {"message": "User successfully registered"}
     except Exception as e:
@@ -297,6 +351,7 @@ async def register(user: UserRegister):
     finally:
         conn.close()
 
+
 @app.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user_from_db(form_data.username)
@@ -304,6 +359,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     access_token = create_access_token(data={"sub": user["username"]})
     return {"access_token": access_token, "token_type": "bearer"}
+
 
 if __name__ == "__main__":
     uvicorn.run("llm_api:app", host="0.0.0.0", port=8000, reload=True)

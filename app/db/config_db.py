@@ -19,14 +19,16 @@ def init_config_db():
     """Inicializa la tabla de configuración con valores por defecto."""
     with sqlite3.connect(str(CONFIG_DB_PATH)) as conn:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS app_config (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             )
-        """)
+        """
+        )
         conn.commit()
-        
+
         # Insertar valores por defecto si no existen
         defaults = {
             "app_name": "SimpleIA",
@@ -35,11 +37,11 @@ def init_config_db():
             "primary_color": "#4A90E2",
             "logo_url": "",
         }
-        
+
         for key, value in defaults.items():
             cursor.execute(
                 "INSERT OR IGNORE INTO app_config (key, value) VALUES (?, ?)",
-                (key, value)
+                (key, value),
             )
         conn.commit()
 
@@ -58,8 +60,7 @@ def set_config(key: str, value: str):
     with sqlite3.connect(str(CONFIG_DB_PATH)) as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
-            (key, value)
+            "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)", (key, value)
         )
         conn.commit()
 

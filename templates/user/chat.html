@@ -538,7 +538,7 @@ app_name }}{% endblock %} {% block extra_css %}
         (conv) => `
         <div class="conversation-item ${
           conv.id === currentConversationId ? "active" : ""
-        }" 
+        }"
              onclick="loadConversation(${conv.id})">
             <div class="title">Conversación #${conv.id}</div>
             <div class="date">${formatDate(conv.created_at)}</div>
