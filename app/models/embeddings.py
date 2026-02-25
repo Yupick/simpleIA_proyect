@@ -5,7 +5,7 @@ Embeddings y búsqueda semántica con sentence-transformers y FAISS.
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
-from typing import List, Tuple
+from typing import List
 import logging
 import os
 import pickle
@@ -36,6 +36,14 @@ class EmbeddingStore:
         # Crear directorio si no existe
         os.makedirs(index_path, exist_ok=True)
 
+        # Cargar modelo inmediatamente para cumplir con tests que esperan
+        # `store.model` no sea None tras la inicialización.
+        try:
+            self.load_model()
+        except Exception:
+            # Degradado silencioso en entornos sin paquetes disponibles
+            logger.exception("No se pudo cargar el modelo de embeddings en init")
+
     def load_model(self):
         """Carga el modelo de sentence-transformers."""
         if self.model is None:
@@ -44,7 +52,7 @@ class EmbeddingStore:
             self.dimension = self.model.get_sentence_embedding_dimension()
             logger.info(f"[Embeddings] Model loaded, dimension: {self.dimension}")
 
-    def embed(self, texts: List[str]) -> np.ndarray:
+    def embed(self, texts) -> np.ndarray:
         """
         Genera embeddings para una lista de textos.
 
@@ -55,7 +63,13 @@ class EmbeddingStore:
             Array numpy de embeddings (shape: [len(texts), dimension])
         """
         self.load_model()
-        embeddings = self.model.encode(texts, convert_to_numpy=True)
+        # Allow single string or list of strings
+        if isinstance(texts, str):
+            emb = self.model.encode([texts], convert_to_numpy=True)
+            # return 1D vector for single text to match tests
+            return emb[0]
+
+        embeddings = self.model.encode(list(texts), convert_to_numpy=True)
         return embeddings
 
     def add_documents(self, documents: List[str]):
@@ -81,7 +95,7 @@ class EmbeddingStore:
         self.documents.extend(documents)
         logger.info(f"[Embeddings] Total documents: {len(self.documents)}")
 
-    def search(self, query: str, top_k: int = 5) -> List[Tuple[str, float]]:
+    def search(self, query: str, k: int = 5) -> list:
         """
         Busca documentos similares a la query.
 
@@ -99,32 +113,38 @@ class EmbeddingStore:
         self.load_model()
 
         # Generar embedding de la query
-        query_embedding = self.embed([query])
+        query_embedding = self.embed(query)
 
         # Buscar top-k más cercanos
         distances, indices = self.index.search(
-            query_embedding.astype("float32"), min(top_k, len(self.documents))
+            np.asarray([query_embedding], dtype="float32"), min(k, len(self.documents))
         )
 
         # Retornar documentos con sus distancias
         results = []
         for i, idx in enumerate(indices[0]):
             if idx != -1:  # FAISS retorna -1 si no hay suficientes resultados
-                results.append((self.documents[idx], float(distances[0][i])))
+                results.append(
+                    {
+                        "document": self.documents[idx],
+                        "distance": float(distances[0][i]),
+                    }
+                )
 
         logger.info(
             f"[Embeddings] Found {len(results)} results for query: {query[:50]}..."
         )
         return results
 
-    def save_index(self, filename: str = "index.faiss"):
+    def save_index(
+        self, index_filename: str = "index.faiss", docs_filename: str = "documents.pkl"
+    ):
         """Guarda índice FAISS y documentos en disco."""
         if self.index is None:
             logger.warning("[Embeddings] No index to save")
             return
-
-        index_file = os.path.join(self.index_path, filename)
-        docs_file = os.path.join(self.index_path, "documents.pkl")
+        index_file = index_filename
+        docs_file = docs_filename
 
         faiss.write_index(self.index, index_file)
         with open(docs_file, "wb") as f:
@@ -132,10 +152,12 @@ class EmbeddingStore:
 
         logger.info(f"[Embeddings] Saved index to {index_file}")
 
-    def load_index(self, filename: str = "index.faiss"):
+    def load_index(
+        self, index_filename: str = "index.faiss", docs_filename: str = "documents.pkl"
+    ):
         """Carga índice FAISS y documentos desde disco."""
-        index_file = os.path.join(self.index_path, filename)
-        docs_file = os.path.join(self.index_path, "documents.pkl")
+        index_file = index_filename
+        docs_file = docs_filename
 
         if not os.path.exists(index_file) or not os.path.exists(docs_file):
             logger.warning("[Embeddings] Index files not found")
