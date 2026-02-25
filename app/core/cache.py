@@ -5,7 +5,7 @@ Cachea por hash(prompt + parámetros) con TTL configurable.
 
 import hashlib
 import time
-from typing import Optional, Dict, Tuple
+from typing import Dict, Tuple
 from threading import Lock
 import logging
 
@@ -13,105 +13,98 @@ logger = logging.getLogger(__name__)
 
 
 class LLMCache:
-    """Cache LRU simple con TTL para respuestas de modelos."""
+    """Cache LRU para respuestas de modelos, compatible con tests.
 
-    def __init__(self, max_size: int = 100, ttl_seconds: int = 3600):
-        """
-        Args:
-            max_size: Número máximo de entradas en cache
-            ttl_seconds: Tiempo de vida de cada entrada en segundos (default 1 hora)
-        """
+    API expected by tests:
+      - __init__(max_size, default_ttl)
+      - set(prompt, params: dict, response, ttl=None)
+      - get(prompt, params: dict)
+      - clear(), get_stats()
+    """
+
+    def __init__(self, max_size: int = 100, default_ttl: int = 3600):
         self.max_size = max_size
-        self.ttl_seconds = ttl_seconds
-        self._cache: Dict[str, Tuple[str, float]] = {}  # key -> (value, timestamp)
-        self._access_order: list = []  # Para implementar LRU
+        self.default_ttl = default_ttl
+        self._cache: Dict[str, Tuple[object, float, int]] = {}
+        # key -> (value, timestamp, ttl)
+        self._access_order: list = []
         self._lock = Lock()
+        self._hits = 0
+        self._misses = 0
 
-    def _make_key(
-        self,
-        prompt: str,
-        max_length: int,
-        num_return_sequences: int,
-        temperature: float,
-    ) -> str:
-        """Genera una clave única basada en el prompt y parámetros."""
-        data = f"{prompt}|{max_length}|{num_return_sequences}|{temperature}"
-        return hashlib.sha256(data.encode()).hexdigest()
+    def _make_key(self, prompt: str, params: dict) -> str:
+        # Normalize params by sorting items to keep key consistent
+        items = tuple(sorted(params.items())) if isinstance(params, dict) else tuple()
+        data = f"{prompt}|{items}"
+        return hashlib.sha256(str(data).encode()).hexdigest()
 
-    def get(
-        self,
-        prompt: str,
-        max_length: int = 50,
-        num_return_sequences: int = 1,
-        temperature: float = 0.7,
-    ) -> Optional[str]:
-        """
-        Obtiene respuesta del cache si existe y no ha expirado.
-
-        Returns:
-            Respuesta cacheada o None si no existe o expiró
-        """
-        key = self._make_key(prompt, max_length, num_return_sequences, temperature)
+    def get(self, prompt: str, params: dict = None):
+        params = params or {}
+        key = self._make_key(prompt, params)
         with self._lock:
             if key not in self._cache:
-                logger.debug(f"[Cache] MISS: {key[:16]}...")
+                self._misses += 1
                 return None
-
-            value, timestamp = self._cache[key]
-            # Verificar TTL
-            if time.time() - timestamp > self.ttl_seconds:
-                logger.debug(f"[Cache] EXPIRED: {key[:16]}...")
+            value, ts, ttl = self._cache[key]
+            if time.time() - ts > ttl:
+                # expired
                 del self._cache[key]
-                self._access_order.remove(key)
+                try:
+                    self._access_order.remove(key)
+                except ValueError:
+                    pass
+                self._misses += 1
                 return None
 
-            # Actualizar orden de acceso (LRU)
-            self._access_order.remove(key)
+            # update LRU order
+            try:
+                self._access_order.remove(key)
+            except ValueError:
+                pass
             self._access_order.append(key)
-            logger.debug(f"[Cache] HIT: {key[:16]}...")
+            self._hits += 1
             return value
 
-    def set(
-        self,
-        prompt: str,
-        response: str,
-        max_length: int = 50,
-        num_return_sequences: int = 1,
-        temperature: float = 0.7,
-    ):
-        """
-        Almacena respuesta en cache.
-        Si se alcanza max_size, elimina el elemento menos recientemente usado.
-        """
-        key = self._make_key(prompt, max_length, num_return_sequences, temperature)
+    def set(self, prompt: str, params: dict, response, ttl: int = None):
+        params = params or {}
+        key = self._make_key(prompt, params)
+        ttl_use = ttl if ttl is not None else self.default_ttl
         with self._lock:
-            # Si ya existe, actualizar timestamp
             if key in self._cache:
-                self._access_order.remove(key)
-            # Si cache lleno, eliminar LRU
+                try:
+                    self._access_order.remove(key)
+                except ValueError:
+                    pass
             elif len(self._cache) >= self.max_size:
-                lru_key = self._access_order.pop(0)
-                del self._cache[lru_key]
-                logger.debug(f"[Cache] EVICT LRU: {lru_key[:16]}...")
+                # evict LRU
+                lru = self._access_order.pop(0)
+                if lru in self._cache:
+                    del self._cache[lru]
 
-            self._cache[key] = (response, time.time())
+            self._cache[key] = (response, time.time(), ttl_use)
             self._access_order.append(key)
-            logger.debug(f"[Cache] SET: {key[:16]}... (total: {len(self._cache)})")
 
     def clear(self):
-        """Limpia todo el cache."""
         with self._lock:
             self._cache.clear()
             self._access_order.clear()
-            logger.info("[Cache] Cleared")
+            self._hits = 0
+            self._misses = 0
 
-    def stats(self) -> Dict[str, int]:
-        """Retorna estadísticas del cache."""
+    def get_stats(self):
         with self._lock:
+            size = len(self._cache)
+            hit_rate = (
+                self._hits / (self._hits + self._misses)
+                if (self._hits + self._misses) > 0
+                else 0.0
+            )
             return {
-                "size": len(self._cache),
+                "size": size,
                 "max_size": self.max_size,
-                "ttl_seconds": self.ttl_seconds,
+                "hits": self._hits,
+                "misses": self._misses,
+                "hit_rate": hit_rate,
             }
 
 
