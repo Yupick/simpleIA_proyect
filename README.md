@@ -592,3 +592,20 @@ venv/bin/python -m pytest tests/test_auth.py tests/test_predict.py tests/test_fe
 - ✅ Feedback storage
 - ✅ HuggingFace integration
 - ✅ Tests básicos
+
+---
+
+## Gitflow
+
+Este repositorio usa la estrategia Gitflow para organizar el desarrollo. Consulta `GITFLOW.md` para la guía completa.
+
+Rápido:
+
+- Inicializar ramas básicas (crea `develop` si no existe):
+
+```bash
+bash scripts/gitflow-init.sh origin
+```
+
+- Protege `main` y `develop` en el remoto y trabaja con `feature/*`, `release/*` y `hotfix/*`.
+

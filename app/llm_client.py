@@ -18,6 +18,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
 from app.core.settings import settings
+import logging
+
+# Logger local
+logger = logging.getLogger(__name__)
 
 # Importar routers de API para funcionalidad del chat
 from app.api.routers.user.chat import router as chat_api_router
@@ -97,7 +101,7 @@ async def get_system_info():
                     provider = provider_map.get(provider_raw, provider_raw)
                     model = config.get("model_name", config.get("selected_model", model))
             except Exception as e:
-                print(f"Error leyendo config: {e}")
+                logger.exception(f"Error leyendo config: {e}")
         
         return JSONResponse(content={
             "provider": provider,
@@ -623,10 +627,10 @@ async def admin_providers_current_proxy(request: Request):
                 error_msg = error_detail.get('detail', str(e))
             except:
                 error_msg = e.response.text or str(e)
-        print(f"Error en providers/current proxy: {error_msg}")
+        logger.error(f"Error en providers/current proxy: {error_msg}")
         return JSONResponse(content={"error": error_msg}, status_code=500)
     except Exception as e:
-        print(f"Error inesperado en providers/current proxy: {str(e)}")
+        logger.exception("Error inesperado en providers/current proxy")
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
@@ -656,10 +660,10 @@ async def admin_providers_models_proxy(request: Request):
                 error_msg = error_detail.get('detail', str(e))
             except:
                 error_msg = e.response.text or str(e)
-        print(f"Error en providers/models proxy: {error_msg}")
+        logger.error(f"Error en providers/models proxy: {error_msg}")
         return JSONResponse(content={"error": error_msg}, status_code=500)
     except Exception as e:
-        print(f"Error inesperado en providers/models proxy: {str(e)}")
+        logger.exception("Error inesperado en providers/models proxy")
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
@@ -685,10 +689,10 @@ async def admin_providers_switch_proxy(request: Request):
                 error_msg = error_detail.get('detail', str(e))
             except:
                 error_msg = e.response.text or str(e)
-        print(f"Error en providers/switch proxy: {error_msg}")
+        logger.error(f"Error en providers/switch proxy: {error_msg}")
         return JSONResponse(content={"error": error_msg, "detail": error_msg}, status_code=500)
     except Exception as e:
-        print(f"Error inesperado en providers/switch proxy: {str(e)}")
+        logger.exception("Error inesperado en providers/switch proxy")
         return JSONResponse(content={"error": str(e), "detail": str(e)}, status_code=500)
 
 
@@ -747,10 +751,10 @@ async def training_proxy(request: Request, path: str):
                 error_msg = error_detail.get('detail', str(e))
             except:
                 error_msg = e.response.text or str(e)
-        print(f"Error en training proxy: {error_msg}")
+        logger.error(f"Error en training proxy: {error_msg}")
         return JSONResponse(content={"error": error_msg, "detail": error_msg}, status_code=status_code)
     except Exception as e:
-        print(f"Error inesperado en training proxy: {str(e)}")
+        logger.exception("Error inesperado en training proxy")
         return JSONResponse(content={"error": str(e), "detail": str(e)}, status_code=500)
 
 
@@ -869,7 +873,7 @@ async def get_user_dashboard(request: Request):
             "recent_activity": recent_activity[:5]
         })
     except Exception as e:
-        print(f"Error en dashboard: {e}")
+        logger.exception("Error en dashboard")
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
@@ -933,7 +937,7 @@ async def get_user_analytics(request: Request, days: int = 7):
             "recent_activity": generate_recent_activity(all_tasks, appointments, products)
         })
     except Exception as e:
-        print(f"Error en analytics: {e}")
+        logger.exception("Error en analytics")
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
@@ -1177,25 +1181,25 @@ async def lifespan(app: FastAPI):
     from app.models.model_manager import load_model
     
     # Inicializar bases de datos
-    print("🔧 Inicializando bases de datos...")
+    logger.info("🔧 Inicializando bases de datos...")
     init_user_db()
     init_products_db()
     init_personal_db()
     init_conversations_db()
-    print("✅ Bases de datos inicializadas")
+    logger.info("✅ Bases de datos inicializadas")
     
     # Cargar modelo LLM
-    print("🤖 Cargando modelo LLM...")
+    logger.info("🤖 Cargando modelo LLM...")
     try:
         load_model()
-        print("✅ Modelo LLM cargado correctamente")
+        logger.info("✅ Modelo LLM cargado correctamente")
     except Exception as e:
-        print(f"⚠️ Error cargando modelo LLM: {e}")
-        print("   El sistema funcionará con respuestas basadas en reglas")
+        logger.exception(f"⚠️ Error cargando modelo LLM: {e}")
+        logger.warning("El sistema funcionará con respuestas basadas en reglas")
     
     yield
     # Shutdown (si es necesario limpiar recursos)
-    print("🔌 Apagando servidor...")
+    logger.info("🔌 Apagando servidor...")
 
 # Aplicar lifespan al app
 app.router.lifespan_context = lifespan

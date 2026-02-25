@@ -45,3 +45,11 @@ class Settings(BaseSettings):
 
 # Instancia global de configuración
 settings = Settings()
+
+# Validación mínima de seguridad en arranque
+if settings.ENVIRONMENT == "production":
+    insecure_keys = {"", "CHANGE_ME", "CHANGE_ME_IN_PRODUCTION", None}
+    if settings.SECRET_KEY in insecure_keys or len(settings.SECRET_KEY) < 32:
+        raise RuntimeError(
+            "Insecure SECRET_KEY for production. Set a strong SECRET_KEY in environment variables."
+        )

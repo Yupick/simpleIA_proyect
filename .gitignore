@@ -27,6 +27,8 @@ data/embeddings/documents.pkl
 venv/
 .venv/
 env/
+/.github/workflows/
+.vscode/
 .env/
 ENV/
 virtualenv/

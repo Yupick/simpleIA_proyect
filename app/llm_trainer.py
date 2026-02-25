@@ -285,15 +285,15 @@ def delete_trained_model():
 def select_pretrained_model():
     english_models = ["gpt2", "bigscience/bloom-560m", "EleutherAI/gpt-neo-125M"]
     spanish_models = ["datificate/gpt2-small-spanish", "flax-community/gpt-2-spanish"]
-    print("\n📦 Available Models:")
-    print("\nEnglish Models:")
-    for idx, model in enumerate(english_models, 1):
-        print(f"  {idx}. {model}")
+        logger.info("\n📦 Available Models:")
+        logger.info("\nEnglish Models:")
+        for idx, model in enumerate(english_models, 1):
+            logger.info(f"  {idx}. {model}")
     offset = len(english_models)
-    print("\nSpanish Models:")
-    for idx, model in enumerate(spanish_models, offset + 1):
-        print(f"  {idx}. {model}")
-    print("  0. Back")
+        logger.info("\nSpanish Models:")
+        for idx, model in enumerate(spanish_models, offset + 1):
+            logger.info(f"  {idx}. {model}")
+        logger.info("  0. Back")
     choice = input("Select a model: ").strip()
     if choice == "0":
         return
@@ -301,13 +301,13 @@ def select_pretrained_model():
         choice = int(choice)
         total_models = len(english_models) + len(spanish_models)
         if choice < 1 or choice > total_models:
-            print("Invalid option.")
+                logger.warning("Invalid option.")
             return
         if choice <= len(english_models):
             selected = english_models[choice - 1]
         else:
             selected = spanish_models[choice - len(english_models)]
-        print(f"\nSelected Model: {selected}")
+            logger.info(f"Selected Model: {selected}")
         config = load_config()
         config["selected_model"] = selected
         save_config(config)
@@ -317,25 +317,25 @@ def select_pretrained_model():
             knowledge_data, _, _ = collect_training_data(KNOWLEDGE_DIR)
             training_data = dialogue_data + knowledge_data
             if not training_data:
-                print("Not enough data for training, loading pretrained model without training.")
+                    logger.warning("Not enough data for training, loading pretrained model without training.")
                 load_model()
             else:
                 train_model(selected, training_data)
         else:
             load_model()
     except (ValueError, IndexError):
-        print("Invalid option.")
+            logger.warning("Invalid option.")
 
 
 def main_menu():
     while True:
-        print("\n=== MAIN MENU ===")
-        print("1. Select pretrained model")
-        print("2. Delete trained model")
-        print("3. Train with files (dialogue/knowledge)")
-        print("4. Manual training")
-        print("5. Retrain with user feedback")
-        print("0. Exit")
+            logger.info("\n=== MAIN MENU ===")
+            logger.info("1. Select pretrained model")
+            logger.info("2. Delete trained model")
+            logger.info("3. Train with files (dialogue/knowledge)")
+            logger.info("4. Manual training")
+            logger.info("5. Retrain with user feedback")
+            logger.info("0. Exit")
         choice = input("Select an option: ").strip()
         if choice == "1":
             select_pretrained_model()
@@ -345,7 +345,7 @@ def main_menu():
             dialogue_data, _, _ = collect_training_data(DIALOGUE_DIR)
             knowledge_data, _, _ = collect_training_data(KNOWLEDGE_DIR)
             total_data = dialogue_data + knowledge_data
-            print(f"\nTotal lines for training: {len(total_data)}")
+                logger.info(f"\nTotal lines for training: {len(total_data)}")
             if not total_data:
                 logger.error("No data found for training.")
             else:
@@ -358,10 +358,10 @@ def main_menu():
         elif choice == "5":
             retrain_with_feedback()
         elif choice == "0":
-            print("Exiting.")
+                logger.info("Exiting.")
             break
         else:
-            print("Invalid option, try again.")
+                logger.warning("Invalid option, try again.")
 
 
 if __name__ == "__main__":
