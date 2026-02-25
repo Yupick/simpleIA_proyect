@@ -36,10 +36,9 @@ Se creó el script `fix_admin_user.py` para resolver este problema fácilmente:
 python3 fix_admin_user.py
 ```
 
-### 3. Credenciales correctas
+### 3. Credenciales (NOTA)
 
-- **Username**: `admin`
-- **Password**: `admin123`
+Por seguridad, las credenciales de ejemplo han sido eliminadas de la documentación. Usa el script `fix_admin_user.py` para restablecer los permisos del usuario `admin` en entornos de pruebas o consulta al administrador del sistema para credenciales seguras.
 
 ## 🧪 Pruebas Realizadas
 
@@ -82,5 +81,5 @@ Se agregó mejor manejo de errores en `admin_providers.html`:
 Si este problema vuelve a ocurrir:
 
 1. Ejecutar `python3 fix_admin_user.py`
-2. Hacer login nuevamente con `admin/admin123`
+2. Hacer login con las credenciales proporcionadas por el administrador (NO incluidas en la documentación)
 3. Los permisos se actualizarán automáticamente
