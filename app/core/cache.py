@@ -109,7 +109,7 @@ class LLMCache:
 
 
 # Instancia global del cache
-_llm_cache = LLMCache(max_size=100, ttl_seconds=3600)
+_llm_cache = LLMCache(max_size=100, default_ttl=3600)
 
 
 def get_cache() -> LLMCache:
