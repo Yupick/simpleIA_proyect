@@ -29,9 +29,8 @@ def fix_admin_user():
         user = cursor.fetchone()
 
         if not user:
-            logger.error(
-                "Usuario 'admin' no encontrado. Crea el usuario primero usando el endpoint de registro."
-            )
+            logger.error("Usuario 'admin' no encontrado.")
+            logger.error("Crea el usuario primero usando el endpoint de registro.")
             return False
 
         username, is_admin, role = user
@@ -62,9 +61,8 @@ def fix_admin_user():
             is_admin,
             role,
         )
-        logger.info(
-            "Para mayor seguridad, restablece la contraseña del usuario admin mediante el endpoint de cambio de contraseña o un proceso seguro."
-        )
+        logger.info("Para mayor seguridad, restablece la contraseña del usuario admin")
+        logger.info("Usa el endpoint de cambio de contraseña o un proceso seguro.")
         return True
 
 

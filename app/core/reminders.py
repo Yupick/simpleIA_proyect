@@ -2,6 +2,7 @@
 Sistema de recordatorios para citas y tareas.
 Scheduler que verifica periódicamente y envía notificaciones.
 """
+
 # ruff: noqa: E402
 
 import sys

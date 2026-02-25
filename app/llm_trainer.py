@@ -2,16 +2,17 @@
 """
 llm_trainer.py
 --------------
-Script de entrenamiento para el LLM que permite:
-  - Seleccionar un modelo preentrenado.
-  - Realizar fine tuning con datos disponibles en las carpetas 'dialogue' y 'knowledge'.
-  - Entrenamiento manual y reentrenamiento con feedback.
+Script de entrenamiento para el LLM. Provee utilidades para:
+    - Seleccionar un modelo preentrenado.
+    - Realizar fine tuning con datos en 'trainer_llm/dialogue' y
+        'trainer_llm/knowledge'.
+    - Entrenamiento manual y reentrenamiento usando feedback.
 
-Estructura (relativa a la raíz del proyecto):
-  - config/config.json
-  - trainer_llm/dialogue y trainer_llm/knowledge para datos de entrenamiento.
-  - model_llm para almacenar modelos entrenados.
-  - feedback/feedback.sqlite para almacenar feedback.
+Estructura relativa a la raíz del proyecto:
+    - config/config.json
+    - trainer_llm/dialogue y trainer_llm/knowledge (datos de entrenamiento)
+    - model_llm (almacenamiento de modelos entrenados)
+    - feedback/feedback.sqlite (feedback almacenado)
 """
 
 import json

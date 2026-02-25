@@ -117,9 +117,8 @@ def main():
     test_reminders_endpoints()
 
     logger.info("NOTA: Los errores 401 son esperados si no estás autenticado.")
-    logger.info(
-        "Para probar con autenticación, inicia sesión en el navegador y copia las cookies de sesión."
-    )
+    logger.info("Para probar con autenticación, inicia sesión en el navegador")
+    logger.info("y copia las cookies de sesión en tu herramienta de pruebas.")
 
 
 if __name__ == "__main__":

@@ -1,13 +1,27 @@
 #!/usr/bin/env python3
 """Admin CLI para operaciones básicas del sistema LLM.
-Uso:
-  python -m app.admin_cli feedback              # Lista feedback almacenado
-  python -m app.admin_cli reload                # Recarga modelo según config
-  python -m app.admin_cli users list            # Lista todos los usuarios con roles
-  python -m app.admin_cli users grant-admin <username>  # Otorga permisos de admin
-  python -m app.admin_cli users revoke-admin <username> # Revoca permisos de admin
-  python -m app.admin_cli users info <username>         # Muestra información del usuario
-  python -m app.admin_cli users reset-password <username> <new_password>  # Cambia contraseña
+
+Uso (ejemplos):
+  python -m app.admin_cli feedback
+      # Lista feedback almacenado (salida truncada a 50 líneas)
+
+  python -m app.admin_cli reload
+      # Recarga el modelo según la configuración en `config.json`
+
+  python -m app.admin_cli users list
+      # Lista todos los usuarios con roles
+
+  python -m app.admin_cli users grant-admin <username>
+      # Otorga permisos de admin al usuario indicado
+
+  python -m app.admin_cli users revoke-admin <username>
+      # Revoca permisos de admin del usuario indicado
+
+  python -m app.admin_cli users info <username>
+      # Muestra información detallada del usuario
+
+  python -m app.admin_cli users reset-password <username> <new_password>
+      # Cambia la contraseña del usuario (puede pedirla interactivamente)
 """
 
 import sys
