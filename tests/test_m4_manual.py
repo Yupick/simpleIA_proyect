@@ -1,6 +1,7 @@
 """
 Tests manuales del Módulo 4 sin dependencias externas.
 """
+
 # ruff: noqa: E402
 
 import sys
