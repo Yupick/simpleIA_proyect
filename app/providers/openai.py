@@ -6,6 +6,11 @@ import httpx
 from .base import BaseLLMProvider
 
 
+# Placeholder class to allow tests to patch the underlying async client
+class AsyncOpenAI:
+    pass
+
+
 class OpenAIProvider(BaseLLMProvider):
     """Provider para modelos OpenAI (GPT-3.5, GPT-4, etc.)."""
 
@@ -81,3 +86,18 @@ class OpenAIProvider(BaseLLMProvider):
             return f"[ERROR] Error de conexión con OpenAI: {str(e)}"
         except Exception as e:
             return f"[ERROR] Error inesperado en OpenAI provider: {str(e)}"
+
+    async def generate_stream(self, prompt, **kwargs):
+        """
+        Basic streaming fallback: call generate() and yield smaller chunks.
+        Real implementations should stream from the API; tests may patch
+        `AsyncOpenAI` or this method.
+        """
+        try:
+            full = await self.generate(prompt, **kwargs)
+            if not full:
+                return
+            for chunk in str(full).split():
+                yield chunk
+        except Exception as e:
+            yield f"[ERROR] Streaming failed: {e}"

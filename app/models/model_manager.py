@@ -183,5 +183,31 @@ async def generate(
         return "[ERROR] Falla en inferencia"
 
 
+async def generate_stream(prompt: str, **kwargs):
+    """
+    Streaming generator for generated text. If a remote provider implements
+    streaming, delegate to it; otherwise generate full text and yield tokens.
+    """
+    # If provider supports streaming, delegate
+    if _provider_instance is not None and hasattr(
+        _provider_instance, "generate_stream"
+    ):
+        try:
+            async for chunk in _provider_instance.generate_stream(prompt, **kwargs):
+                yield chunk
+            return
+        except Exception as e:
+            logger.error(f"Provider streaming error: {e}")
+            yield f"[ERROR] Provider streaming failed: {e}"
+
+    # Fallback: generate full text and yield simple token chunks
+    text = await generate(prompt, **kwargs)
+    if not text:
+        return
+    # Simple tokenizer: split by whitespace and yield tokens
+    for token in str(text).split():
+        yield token
+
+
 def current_model_name() -> Optional[str]:
     return _current_model_name

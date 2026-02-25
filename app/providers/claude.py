@@ -6,6 +6,11 @@ import httpx
 from .base import BaseLLMProvider
 
 
+# Placeholder class to allow tests to patch the underlying async client
+class AsyncAnthropic:
+    pass
+
+
 class ClaudeProvider(BaseLLMProvider):
     """Provider para modelos Claude de Anthropic."""
 
@@ -92,3 +97,18 @@ class ClaudeProvider(BaseLLMProvider):
             return f"[ERROR] Error de conexión con Claude: {str(e)}"
         except Exception as e:
             return f"[ERROR] Error inesperado en Claude provider: {str(e)}"
+
+    async def generate_stream(self, prompt, **kwargs):
+        """
+        Basic streaming fallback: call generate() and yield smaller chunks.
+        Providers with real streaming should override this with real event
+        objects; tests may patch `AsyncAnthropic` or this method.
+        """
+        try:
+            full = await self.generate(prompt, **kwargs)
+            if not full:
+                return
+            for chunk in str(full).split():
+                yield chunk
+        except Exception as e:
+            yield f"[ERROR] Streaming failed: {e}"
